@@ -1,0 +1,6 @@
+project_id,client_id,project_name,project_status,proposed_fee_eur,budget_eur,wip_eur,win_probability,project_manager,classification,ai_access
+STR-2026-001,CL-101,European Market Entry,Active,85000,48000,12500,1.0,PM-001,confidential,denied
+STR-2026-002,CL-102,Portfolio Optimisation,Active,120000,72000,18500,1.0,PM-002,confidential,denied
+STR-2026-003,CL-108,Regional Expansion Strategy,Pipeline,95000,55000,0,0.65,PM-001,confidential,denied
+STR-2026-004,CL-109,Corporate Location Strategy,Pipeline,68000,37000,0,0.40,PM-003,confidential,denied
+STR-2026-005,CL-110,Market Feasibility Study,Pipeline,45000,25000,0,0.75,PM-002,internal,approved

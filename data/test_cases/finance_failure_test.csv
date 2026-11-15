@@ -1,0 +1,3 @@
+transaction_id,transaction_date,business_unit,cost_center,project_id,client_id,transaction_type,category,description,counterparty_id,amount_eur,classification,source_system
+900002,2026-07-02,Strategy Consulting,STR-001,STR-2026-001,CL-001,Revenue,Consulting Fees,Test valid transaction,CLIENT-001,8000,confidential,Test ERP
+900003,2026-07-03,Strategy Consulting,STR-001,STR-2026-001,CL-001,Revenue,Consulting Fees,Test invalid negative amount,CLIENT-001,5000,confidential,Test ERP

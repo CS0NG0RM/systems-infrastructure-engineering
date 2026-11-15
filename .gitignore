@@ -1,0 +1,37 @@
+# Python virtual environments
+.venv/
+.venv-prefect/
+venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Generated logs
+logs/
+*.log
+*.jsonl
+
+# Incoming Finance exports
+data/incoming/
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+
+# Editor and operating system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

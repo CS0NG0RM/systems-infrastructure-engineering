@@ -1,0 +1,175 @@
+transaction_id,transaction_date,business_unit,cost_center,project_id,client_id,transaction_type,category,description,counterparty_id,amount_eur,classification,source_system
+10001,2026-01-05,Strategy Consulting,STR,STR-2026-001,CL-101,Revenue,Consulting Fees,European Market Entry - monthly milestone invoice,CL-101,21357.00,confidential,ERP-SIM
+10002,2026-01-06,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,External Contractors,Specialist contractor delivery services,VEN-201,5496.25,confidential,ERP-SIM
+10003,2026-01-07,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Research & Data,Industry research subscription and data access,VEN-203,663.75,confidential,ERP-SIM
+10004,2026-01-07,Strategy Consulting,STR,STR-2026-002,CL-102,Revenue,Consulting Fees,Portfolio Optimisation - monthly milestone invoice,CL-102,32103.00,confidential,ERP-SIM
+10005,2026-01-08,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,374.00,internal,ERP-SIM
+10006,2026-01-09,Technology Advisory,TEC,TEC-2026-001,CL-103,Revenue,Consulting Fees,Cloud Migration Assessment - monthly milestone invoice,CL-103,19358.00,confidential,ERP-SIM
+10007,2026-01-10,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Training,Delivery team professional development,VEN-205,642.25,confidential,ERP-SIM
+10008,2026-01-11,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,External Contractors,Specialist contractor delivery services,VEN-201,6054.75,confidential,ERP-SIM
+10009,2026-01-11,Technology Advisory,TEC,TEC-2026-002,CL-104,Revenue,Consulting Fees,Data Platform Modernisation - monthly milestone invoice,CL-104,16708.00,confidential,ERP-SIM
+10010,2026-01-12,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Training,Delivery team professional development,VEN-205,949.50,confidential,ERP-SIM
+10011,2026-01-13,Workplace Consulting,WRK,WRK-2026-001,CL-105,Revenue,Consulting Fees,Workplace Strategy Review - monthly milestone invoice,CL-105,16041.00,confidential,ERP-SIM
+10012,2026-01-14,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Research & Data,Industry research subscription and data access,VEN-203,1244.50,confidential,ERP-SIM
+10013,2026-01-15,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Project Materials,Workshop and project materials,VEN-206,249.00,internal,ERP-SIM
+10014,2026-01-15,Workplace Consulting,WRK,WRK-2026-002,CL-106,Revenue,Consulting Fees,Office Footprint Assessment - monthly milestone invoice,CL-106,31512.00,confidential,ERP-SIM
+10015,2026-01-16,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,196.50,confidential,ERP-SIM
+10016,2026-01-17,Financial Advisory,FIN,FIN-2026-001,CL-107,Revenue,Consulting Fees,Commercial Due Diligence - monthly milestone invoice,CL-107,29688.00,confidential,ERP-SIM
+10017,2026-01-18,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Research & Data,Industry research subscription and data access,VEN-203,1879.50,confidential,ERP-SIM
+10018,2026-01-19,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Training,Delivery team professional development,VEN-205,983.75,confidential,ERP-SIM
+10019,2026-01-19,Financial Advisory,FIN,FIN-2026-002,CL-108,Revenue,Consulting Fees,Cost Transformation Programme - monthly milestone invoice,CL-108,22163.00,confidential,ERP-SIM
+10020,2026-01-20,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,External Contractors,Specialist contractor delivery services,VEN-201,3319.00,confidential,ERP-SIM
+10021,2026-01-21,Operations Consulting,OPS,OPS-2026-001,CL-109,Revenue,Consulting Fees,Service Delivery Optimisation - monthly milestone invoice,CL-109,12626.00,confidential,ERP-SIM
+10022,2026-01-22,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1489.00,confidential,ERP-SIM
+10023,2026-01-23,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1483.75,confidential,ERP-SIM
+10024,2026-01-23,Operations Consulting,OPS,OPS-2026-002,CL-110,Revenue,Consulting Fees,Procurement Transformation - monthly milestone invoice,CL-110,22880.00,confidential,ERP-SIM
+10025,2026-01-24,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,Project Materials,Workshop and project materials,VEN-206,620.00,internal,ERP-SIM
+10026,2026-01-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,8864.00,confidential,ERP-SIM
+10027,2026-01-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2031.00,confidential,ERP-SIM
+10028,2026-01-25,IT Services,ITS,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,8361.00,confidential,ERP-SIM
+10029,2026-01-25,IT Services,ITS,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2433.00,confidential,ERP-SIM
+10030,2026-02-06,Strategy Consulting,STR,STR-2026-001,CL-101,Revenue,Consulting Fees,European Market Entry - monthly milestone invoice,CL-101,31778.00,confidential,ERP-SIM
+10031,2026-02-07,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Research & Data,Industry research subscription and data access,VEN-203,1941.50,confidential,ERP-SIM
+10032,2026-02-08,Strategy Consulting,STR,STR-2026-002,CL-102,Revenue,Consulting Fees,Portfolio Optimisation - monthly milestone invoice,CL-102,32873.00,confidential,ERP-SIM
+10033,2026-02-09,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,External Contractors,Specialist contractor delivery services,VEN-201,1778.50,confidential,ERP-SIM
+10034,2026-02-10,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,819.50,internal,ERP-SIM
+10035,2026-02-10,Technology Advisory,TEC,TEC-2026-001,CL-103,Revenue,Consulting Fees,Cloud Migration Assessment - monthly milestone invoice,CL-103,32385.00,confidential,ERP-SIM
+10036,2026-02-11,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1364.25,internal,ERP-SIM
+10037,2026-02-12,Technology Advisory,TEC,TEC-2026-002,CL-104,Revenue,Consulting Fees,Data Platform Modernisation - monthly milestone invoice,CL-104,21817.00,confidential,ERP-SIM
+10038,2026-02-13,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1284.25,internal,ERP-SIM
+10039,2026-02-14,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Research & Data,Industry research subscription and data access,VEN-203,1381.50,confidential,ERP-SIM
+10040,2026-02-14,Workplace Consulting,WRK,WRK-2026-001,CL-105,Revenue,Consulting Fees,Workplace Strategy Review - monthly milestone invoice,CL-105,15527.00,confidential,ERP-SIM
+10041,2026-02-15,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Training,Delivery team professional development,VEN-205,1200.50,confidential,ERP-SIM
+10042,2026-02-16,Workplace Consulting,WRK,WRK-2026-002,CL-106,Revenue,Consulting Fees,Office Footprint Assessment - monthly milestone invoice,CL-106,31387.00,confidential,ERP-SIM
+10043,2026-02-17,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Research & Data,Industry research subscription and data access,VEN-203,1418.00,confidential,ERP-SIM
+10044,2026-02-18,Financial Advisory,FIN,FIN-2026-001,CL-107,Revenue,Consulting Fees,Commercial Due Diligence - monthly milestone invoice,CL-107,13326.00,confidential,ERP-SIM
+10045,2026-02-18,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Project Materials,Workshop and project materials,VEN-206,465.00,internal,ERP-SIM
+10046,2026-02-19,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1090.25,confidential,ERP-SIM
+10047,2026-02-20,Financial Advisory,FIN,FIN-2026-002,CL-108,Revenue,Consulting Fees,Cost Transformation Programme - monthly milestone invoice,CL-108,16297.00,confidential,ERP-SIM
+10048,2026-02-21,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,566.50,internal,ERP-SIM
+10049,2026-02-22,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,236.75,confidential,ERP-SIM
+10050,2026-02-22,Operations Consulting,OPS,OPS-2026-001,CL-109,Revenue,Consulting Fees,Service Delivery Optimisation - monthly milestone invoice,CL-109,15368.00,confidential,ERP-SIM
+10051,2026-02-23,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Research & Data,Industry research subscription and data access,VEN-203,2129.25,confidential,ERP-SIM
+10052,2026-02-24,Operations Consulting,OPS,OPS-2026-002,CL-110,Revenue,Consulting Fees,Procurement Transformation - monthly milestone invoice,CL-110,24546.00,confidential,ERP-SIM
+10053,2026-02-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,10376.00,confidential,ERP-SIM
+10054,2026-02-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2308.00,confidential,ERP-SIM
+10055,2026-02-25,IT Services,ITS,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,10374.00,confidential,ERP-SIM
+10056,2026-02-25,IT Services,ITS,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,1836.00,confidential,ERP-SIM
+10057,2026-02-25,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,External Contractors,Specialist contractor delivery services,VEN-201,7117.00,confidential,ERP-SIM
+10058,2026-02-26,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,Training,Delivery team professional development,VEN-205,419.25,confidential,ERP-SIM
+10059,2026-03-07,Strategy Consulting,STR,STR-2026-001,CL-101,Revenue,Consulting Fees,European Market Entry - monthly milestone invoice,CL-101,19746.00,confidential,ERP-SIM
+10060,2026-03-08,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1072.75,internal,ERP-SIM
+10061,2026-03-09,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Research & Data,Industry research subscription and data access,VEN-203,1194.00,confidential,ERP-SIM
+10062,2026-03-09,Strategy Consulting,STR,STR-2026-002,CL-102,Revenue,Consulting Fees,Portfolio Optimisation - monthly milestone invoice,CL-102,16626.00,confidential,ERP-SIM
+10063,2026-03-10,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1440.75,confidential,ERP-SIM
+10064,2026-03-11,Technology Advisory,TEC,TEC-2026-001,CL-103,Revenue,Consulting Fees,Cloud Migration Assessment - monthly milestone invoice,CL-103,12236.00,confidential,ERP-SIM
+10065,2026-03-12,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Research & Data,Industry research subscription and data access,VEN-203,784.00,confidential,ERP-SIM
+10066,2026-03-13,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Project Materials,Workshop and project materials,VEN-206,98.00,internal,ERP-SIM
+10067,2026-03-13,Technology Advisory,TEC,TEC-2026-002,CL-104,Revenue,Consulting Fees,Data Platform Modernisation - monthly milestone invoice,CL-104,27739.00,confidential,ERP-SIM
+10068,2026-03-14,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Research & Data,Industry research subscription and data access,VEN-203,1623.25,confidential,ERP-SIM
+10069,2026-03-15,Workplace Consulting,WRK,WRK-2026-001,CL-105,Revenue,Consulting Fees,Workplace Strategy Review - monthly milestone invoice,CL-105,29093.00,confidential,ERP-SIM
+10070,2026-03-16,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Project Materials,Workshop and project materials,VEN-206,426.75,internal,ERP-SIM
+10071,2026-03-17,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,External Contractors,Specialist contractor delivery services,VEN-201,6472.25,confidential,ERP-SIM
+10072,2026-03-17,Workplace Consulting,WRK,WRK-2026-002,CL-106,Revenue,Consulting Fees,Office Footprint Assessment - monthly milestone invoice,CL-106,24854.00,confidential,ERP-SIM
+10073,2026-03-18,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Research & Data,Industry research subscription and data access,VEN-203,1869.00,confidential,ERP-SIM
+10074,2026-03-19,Financial Advisory,FIN,FIN-2026-001,CL-107,Revenue,Consulting Fees,Commercial Due Diligence - monthly milestone invoice,CL-107,27654.00,confidential,ERP-SIM
+10075,2026-03-20,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Research & Data,Industry research subscription and data access,VEN-203,1845.00,confidential,ERP-SIM
+10076,2026-03-21,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,715.25,confidential,ERP-SIM
+10077,2026-03-21,Financial Advisory,FIN,FIN-2026-002,CL-108,Revenue,Consulting Fees,Cost Transformation Programme - monthly milestone invoice,CL-108,13187.00,confidential,ERP-SIM
+10078,2026-03-22,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,674.50,internal,ERP-SIM
+10079,2026-03-23,Operations Consulting,OPS,OPS-2026-001,CL-109,Revenue,Consulting Fees,Service Delivery Optimisation - monthly milestone invoice,CL-109,33645.00,confidential,ERP-SIM
+10080,2026-03-24,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,External Contractors,Specialist contractor delivery services,VEN-201,3885.50,confidential,ERP-SIM
+10081,2026-03-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,8167.00,confidential,ERP-SIM
+10082,2026-03-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2810.00,confidential,ERP-SIM
+10083,2026-03-25,IT Services,ITS,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,8793.00,confidential,ERP-SIM
+10084,2026-03-25,IT Services,ITS,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2783.00,confidential,ERP-SIM
+10085,2026-03-25,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Research & Data,Industry research subscription and data access,VEN-203,631.25,confidential,ERP-SIM
+10086,2026-03-25,Operations Consulting,OPS,OPS-2026-002,CL-110,Revenue,Consulting Fees,Procurement Transformation - monthly milestone invoice,CL-110,14158.00,confidential,ERP-SIM
+10087,2026-03-26,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,Research & Data,Industry research subscription and data access,VEN-203,638.50,confidential,ERP-SIM
+10088,2026-04-04,Operations Consulting,OPS,OPS-2026-002,CL-110,Revenue,Consulting Fees,Procurement Transformation - monthly milestone invoice,CL-110,23213.00,confidential,ERP-SIM
+10089,2026-04-05,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,External Contractors,Specialist contractor delivery services,VEN-201,3395.25,confidential,ERP-SIM
+10090,2026-04-06,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,Project Materials,Workshop and project materials,VEN-206,396.00,internal,ERP-SIM
+10091,2026-04-08,Strategy Consulting,STR,STR-2026-001,CL-101,Revenue,Consulting Fees,European Market Entry - monthly milestone invoice,CL-101,33945.00,confidential,ERP-SIM
+10092,2026-04-09,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,External Contractors,Specialist contractor delivery services,VEN-201,6044.75,confidential,ERP-SIM
+10093,2026-04-10,Strategy Consulting,STR,STR-2026-002,CL-102,Revenue,Consulting Fees,Portfolio Optimisation - monthly milestone invoice,CL-102,25181.00,confidential,ERP-SIM
+10094,2026-04-11,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1704.25,confidential,ERP-SIM
+10095,2026-04-12,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Training,Delivery team professional development,VEN-205,591.50,confidential,ERP-SIM
+10096,2026-04-12,Technology Advisory,TEC,TEC-2026-001,CL-103,Revenue,Consulting Fees,Cloud Migration Assessment - monthly milestone invoice,CL-103,26029.00,confidential,ERP-SIM
+10097,2026-04-13,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Training,Delivery team professional development,VEN-205,961.00,confidential,ERP-SIM
+10098,2026-04-14,Technology Advisory,TEC,TEC-2026-002,CL-104,Revenue,Consulting Fees,Data Platform Modernisation - monthly milestone invoice,CL-104,13388.00,confidential,ERP-SIM
+10099,2026-04-15,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Training,Delivery team professional development,VEN-205,934.25,confidential,ERP-SIM
+10100,2026-04-16,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,944.75,internal,ERP-SIM
+10101,2026-04-16,Workplace Consulting,WRK,WRK-2026-001,CL-105,Revenue,Consulting Fees,Workplace Strategy Review - monthly milestone invoice,CL-105,21535.00,confidential,ERP-SIM
+10102,2026-04-17,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Research & Data,Industry research subscription and data access,VEN-203,506.00,confidential,ERP-SIM
+10103,2026-04-18,Workplace Consulting,WRK,WRK-2026-002,CL-106,Revenue,Consulting Fees,Office Footprint Assessment - monthly milestone invoice,CL-106,19541.00,confidential,ERP-SIM
+10104,2026-04-19,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Training,Delivery team professional development,VEN-205,1299.75,confidential,ERP-SIM
+10105,2026-04-20,Financial Advisory,FIN,FIN-2026-001,CL-107,Revenue,Consulting Fees,Commercial Due Diligence - monthly milestone invoice,CL-107,13605.00,confidential,ERP-SIM
+10106,2026-04-20,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,External Contractors,Specialist contractor delivery services,VEN-201,5200.50,confidential,ERP-SIM
+10107,2026-04-21,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Project Materials,Workshop and project materials,VEN-206,613.50,internal,ERP-SIM
+10108,2026-04-22,Financial Advisory,FIN,FIN-2026-002,CL-108,Revenue,Consulting Fees,Cost Transformation Programme - monthly milestone invoice,CL-108,19506.00,confidential,ERP-SIM
+10109,2026-04-23,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Training,Delivery team professional development,VEN-205,606.00,confidential,ERP-SIM
+10110,2026-04-24,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1680.50,confidential,ERP-SIM
+10111,2026-04-24,Operations Consulting,OPS,OPS-2026-001,CL-109,Revenue,Consulting Fees,Service Delivery Optimisation - monthly milestone invoice,CL-109,12809.00,confidential,ERP-SIM
+10112,2026-04-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,10888.00,confidential,ERP-SIM
+10113,2026-04-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2058.00,confidential,ERP-SIM
+10114,2026-04-25,IT Services,ITS,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,8732.00,confidential,ERP-SIM
+10115,2026-04-25,IT Services,ITS,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2098.00,confidential,ERP-SIM
+10116,2026-04-25,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,External Contractors,Specialist contractor delivery services,VEN-201,3633.25,confidential,ERP-SIM
+10117,2026-05-05,Operations Consulting,OPS,OPS-2026-002,CL-110,Revenue,Consulting Fees,Procurement Transformation - monthly milestone invoice,CL-110,13204.00,confidential,ERP-SIM
+10118,2026-05-06,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,Training,Delivery team professional development,VEN-205,971.25,confidential,ERP-SIM
+10119,2026-05-09,Strategy Consulting,STR,STR-2026-001,CL-101,Revenue,Consulting Fees,European Market Entry - monthly milestone invoice,CL-101,26323.00,confidential,ERP-SIM
+10120,2026-05-10,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1324.00,confidential,ERP-SIM
+10121,2026-05-11,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1446.50,internal,ERP-SIM
+10122,2026-05-11,Strategy Consulting,STR,STR-2026-002,CL-102,Revenue,Consulting Fees,Portfolio Optimisation - monthly milestone invoice,CL-102,18613.00,confidential,ERP-SIM
+10123,2026-05-12,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,External Contractors,Specialist contractor delivery services,VEN-201,2409.50,confidential,ERP-SIM
+10124,2026-05-13,Technology Advisory,TEC,TEC-2026-001,CL-103,Revenue,Consulting Fees,Cloud Migration Assessment - monthly milestone invoice,CL-103,24179.00,confidential,ERP-SIM
+10125,2026-05-14,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,491.50,confidential,ERP-SIM
+10126,2026-05-15,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,Research & Data,Industry research subscription and data access,VEN-203,1308.25,confidential,ERP-SIM
+10127,2026-05-15,Technology Advisory,TEC,TEC-2026-002,CL-104,Revenue,Consulting Fees,Data Platform Modernisation - monthly milestone invoice,CL-104,29642.00,confidential,ERP-SIM
+10128,2026-05-16,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Project Materials,Workshop and project materials,VEN-206,401.00,internal,ERP-SIM
+10129,2026-05-17,Workplace Consulting,WRK,WRK-2026-001,CL-105,Revenue,Consulting Fees,Workplace Strategy Review - monthly milestone invoice,CL-105,15693.00,confidential,ERP-SIM
+10130,2026-05-18,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1092.75,internal,ERP-SIM
+10131,2026-05-19,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Training,Delivery team professional development,VEN-205,1446.25,confidential,ERP-SIM
+10132,2026-05-19,Workplace Consulting,WRK,WRK-2026-002,CL-106,Revenue,Consulting Fees,Office Footprint Assessment - monthly milestone invoice,CL-106,30922.00,confidential,ERP-SIM
+10133,2026-05-20,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1530.00,confidential,ERP-SIM
+10134,2026-05-21,Financial Advisory,FIN,FIN-2026-001,CL-107,Revenue,Consulting Fees,Commercial Due Diligence - monthly milestone invoice,CL-107,21125.00,confidential,ERP-SIM
+10135,2026-05-22,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,External Contractors,Specialist contractor delivery services,VEN-201,4127.00,confidential,ERP-SIM
+10136,2026-05-23,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1201.75,confidential,ERP-SIM
+10137,2026-05-23,Financial Advisory,FIN,FIN-2026-002,CL-108,Revenue,Consulting Fees,Cost Transformation Programme - monthly milestone invoice,CL-108,23643.00,confidential,ERP-SIM
+10138,2026-05-24,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,601.50,internal,ERP-SIM
+10139,2026-05-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,9426.00,confidential,ERP-SIM
+10140,2026-05-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2869.00,confidential,ERP-SIM
+10141,2026-05-25,IT Services,ITS,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,10899.00,confidential,ERP-SIM
+10142,2026-05-25,IT Services,ITS,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2515.00,confidential,ERP-SIM
+10143,2026-05-25,Operations Consulting,OPS,OPS-2026-001,CL-109,Revenue,Consulting Fees,Service Delivery Optimisation - monthly milestone invoice,CL-109,12210.00,confidential,ERP-SIM
+10144,2026-05-26,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,199.00,internal,ERP-SIM
+10145,2026-05-27,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Software & SaaS,Project analytics and collaboration licences,VEN-204,1466.75,confidential,ERP-SIM
+10146,2026-06-04,Operations Consulting,OPS,OPS-2026-001,CL-109,Revenue,Consulting Fees,Service Delivery Optimisation - monthly milestone invoice,CL-109,24871.00,confidential,ERP-SIM
+10147,2026-06-05,Operations Consulting,OPS,OPS-2026-001,CL-109,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,445.00,internal,ERP-SIM
+10148,2026-06-06,Operations Consulting,OPS,OPS-2026-002,CL-110,Revenue,Consulting Fees,Procurement Transformation - monthly milestone invoice,CL-110,15320.00,confidential,ERP-SIM
+10149,2026-06-07,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,Training,Delivery team professional development,VEN-205,1271.75,confidential,ERP-SIM
+10150,2026-06-08,Operations Consulting,OPS,OPS-2026-002,CL-110,Expense,External Contractors,Specialist contractor delivery services,VEN-201,3466.75,confidential,ERP-SIM
+10151,2026-06-10,Strategy Consulting,STR,STR-2026-001,CL-101,Revenue,Consulting Fees,European Market Entry - monthly milestone invoice,CL-101,16419.00,confidential,ERP-SIM
+10152,2026-06-11,Strategy Consulting,STR,STR-2026-001,CL-101,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,907.00,internal,ERP-SIM
+10153,2026-06-12,Strategy Consulting,STR,STR-2026-002,CL-102,Revenue,Consulting Fees,Portfolio Optimisation - monthly milestone invoice,CL-102,27111.00,confidential,ERP-SIM
+10154,2026-06-13,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Project Materials,Workshop and project materials,VEN-206,327.00,internal,ERP-SIM
+10155,2026-06-14,Strategy Consulting,STR,STR-2026-002,CL-102,Expense,Project Materials,Workshop and project materials,VEN-206,102.25,internal,ERP-SIM
+10156,2026-06-14,Technology Advisory,TEC,TEC-2026-001,CL-103,Revenue,Consulting Fees,Cloud Migration Assessment - monthly milestone invoice,CL-103,33215.00,confidential,ERP-SIM
+10157,2026-06-15,Technology Advisory,TEC,TEC-2026-001,CL-103,Expense,External Contractors,Specialist contractor delivery services,VEN-201,5613.00,confidential,ERP-SIM
+10158,2026-06-16,Technology Advisory,TEC,TEC-2026-002,CL-104,Revenue,Consulting Fees,Data Platform Modernisation - monthly milestone invoice,CL-104,19650.00,confidential,ERP-SIM
+10159,2026-06-17,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1037.25,internal,ERP-SIM
+10160,2026-06-18,Technology Advisory,TEC,TEC-2026-002,CL-104,Expense,External Contractors,Specialist contractor delivery services,VEN-201,4954.25,confidential,ERP-SIM
+10161,2026-06-18,Workplace Consulting,WRK,WRK-2026-001,CL-105,Revenue,Consulting Fees,Workplace Strategy Review - monthly milestone invoice,CL-105,21375.00,confidential,ERP-SIM
+10162,2026-06-19,Workplace Consulting,WRK,WRK-2026-001,CL-105,Expense,Project Materials,Workshop and project materials,VEN-206,236.75,internal,ERP-SIM
+10163,2026-06-20,Workplace Consulting,WRK,WRK-2026-002,CL-106,Revenue,Consulting Fees,Office Footprint Assessment - monthly milestone invoice,CL-106,15211.00,confidential,ERP-SIM
+10164,2026-06-21,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,External Contractors,Specialist contractor delivery services,VEN-201,7075.50,confidential,ERP-SIM
+10165,2026-06-22,Financial Advisory,FIN,FIN-2026-001,CL-107,Revenue,Consulting Fees,Commercial Due Diligence - monthly milestone invoice,CL-107,17576.00,confidential,ERP-SIM
+10166,2026-06-22,Workplace Consulting,WRK,WRK-2026-002,CL-106,Expense,Travel & Accommodation,Client workshop travel and hotel,VEN-202,1203.00,internal,ERP-SIM
+10167,2026-06-23,Financial Advisory,FIN,FIN-2026-001,CL-107,Expense,Research & Data,Industry research subscription and data access,VEN-203,2217.75,confidential,ERP-SIM
+10168,2026-06-24,Financial Advisory,FIN,FIN-2026-002,CL-108,Revenue,Consulting Fees,Cost Transformation Programme - monthly milestone invoice,CL-108,31224.00,confidential,ERP-SIM
+10169,2026-06-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,10872.00,confidential,ERP-SIM
+10170,2026-06-25,Corporate Services,COR,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,2276.00,confidential,ERP-SIM
+10171,2026-06-25,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Training,Delivery team professional development,VEN-205,1012.50,confidential,ERP-SIM
+10172,2026-06-25,IT Services,ITS,CORP-OVERHEAD,,Expense,Office Rent,Monthly premises rental,VEN-301,10205.00,confidential,ERP-SIM
+10173,2026-06-25,IT Services,ITS,CORP-OVERHEAD,,Expense,IT Infrastructure,Cloud and network operating costs,VEN-302,3237.00,confidential,ERP-SIM
+10174,2026-06-26,Financial Advisory,FIN,FIN-2026-002,CL-108,Expense,Project Materials,Workshop and project materials,VEN-206,502.75,internal,ERP-SIM
