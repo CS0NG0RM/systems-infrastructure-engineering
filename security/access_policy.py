@@ -5,6 +5,7 @@ ACCESS_POLICIES = {
     "finance_reports": {"finance"},
     "strategy_projects": {"strategy", "finance"},
     "ai_approved_data": {"ai_service", "strategy", "finance", "employee"},
+    "ingestion_monitoring": {"finance"},
 }
 
 
@@ -15,6 +16,7 @@ ROLE_PERMISSIONS = {
         "strategy_projects.read",
         "ai_approved_data.read",
         "documents.read",
+        "ingestion_monitoring.read",
     },
     "strategy": {
         "strategy_projects.read",

@@ -24,6 +24,23 @@ def test_employee_cannot_access_confidential_document():
     assert response.json()["detail"] == "Access denied"
 
 
+def test_health_endpoint_returns_503_when_database_unavailable(monkeypatch):
+    """The health endpoint must fail safely when SQLite is unavailable."""
+    import sqlite3
+
+    def unavailable_database(*args, **kwargs):
+        raise sqlite3.OperationalError("database unavailable")
+
+    monkeypatch.setattr(sqlite3, "connect", unavailable_database)
+
+    response = client.get("/health")
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Service temporarily unavailable"
+    }
+
+
 def test_finance_can_access_confidential_document():
     response = client.get(
         "/documents/2",
@@ -165,3 +182,61 @@ def test_document_access_permission_matrix(
     )
 
     assert response.status_code == expected_status
+
+def test_finance_can_view_ingestion_status():
+    """Finance users can view aggregate ingestion statistics."""
+    response = client.get(
+        "/operations/ingestion-status",
+        headers={"x-demo-token": "demo-finance-token"},
+    )
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert set(data) == {
+        "total_imports",
+        "successful_imports",
+        "failed_imports",
+    }
+    assert data["total_imports"] == (
+        data["successful_imports"] + data["failed_imports"]
+    )
+
+
+def test_employee_cannot_view_ingestion_status():
+    """Employees cannot access Finance ingestion monitoring."""
+    response = client.get(
+        "/operations/ingestion-status",
+        headers={"x-demo-token": "demo-employee-token"},
+    )
+
+    assert response.status_code == 403
+    assert response.json() == {"detail": "Access denied"}
+
+def test_ingestion_status_returns_503_when_database_unavailable(monkeypatch):
+    """Monitoring must fail safely without interrupting authentication."""
+    import sqlite3
+
+    from pipelines.ingest_finance import DATABASE_PATH
+
+    original_connect = sqlite3.connect
+
+    def connect_with_finance_failure(database, *args, **kwargs):
+        # Simulate a Finance database outage, leaving identity.db available.
+        if DATABASE_PATH.resolve().as_uri() in str(database):
+            raise sqlite3.OperationalError("database unavailable")
+
+        return original_connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", connect_with_finance_failure)
+
+    response = client.get(
+        "/operations/ingestion-status",
+        headers={"x-demo-token": "demo-finance-token"},
+    )
+
+    assert response.status_code == 503
+    assert response.json() == {
+        "detail": "Monitoring temporarily unavailable"
+    }
