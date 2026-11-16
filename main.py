@@ -9,9 +9,12 @@ from security.audit_log import record_access_event
 from security.dependencies import require_identity
 from security.identity import Identity
 from config import DATABASE_PATH
+from app.api.routes.projects import router as projects_router
 
 # Create the API application.
 app = FastAPI(title="Secure Enterprise Data & AI Platform")
+
+app.include_router(projects_router)
 
 
 # Fictional documents used to demonstrate information access controls.
@@ -109,88 +112,6 @@ def get_finance_projects(
         }
         for project_id, name, proposed_fee, revenue in results
     ]
-
-@app.get("/departments/strategy/projects")
-def get_strategy_projects(
-    identity: Identity = Depends(require_identity("strategy_projects")),
-):
-    """Return Strategy Consulting project information to authorised users."""
-
-    # Retrieve the authenticated user's role.
-    role = identity.role
-
-    # Require explicit permission to read Strategy project information.
-    if not is_permission_allowed(role, "strategy_projects.read"):
-        record_access_event(role, "strategy_projects", "denied")
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    record_access_event(role, "strategy_projects", "allowed")
-
-    # Retrieve project information without returning confidential fee figures.
-    import sqlite3
-
-    with sqlite3.connect(DATABASE_PATH) as connection:
-        connection.row_factory = sqlite3.Row
-
-        projects = connection.execute(
-            """
-            SELECT project_id, project_name, project_status
-            FROM department_projects
-            WHERE project_id LIKE ?
-            ORDER BY project_id
-            """,
-            ("STR-%",),
-        ).fetchall()
-
-    return [dict(project) for project in projects]
-
-@app.get("/ai/projects")
-def get_ai_approved_projects(
-    identity: Identity = Depends(require_identity("ai_approved_data")),
-):
-    """Return project summaries explicitly approved for AI retrieval."""
-
-    # Retrieve the authenticated service or user's role.
-    role = identity.role
-
-    # Require explicit permission to retrieve AI-approved data.
-    if not is_permission_allowed(role, "ai_approved_data.read"):
-        record_access_event(role, "ai_approved_data", "denied")
-        raise HTTPException(status_code=403, detail="Access denied")
-
-    record_access_event(role, "ai_approved_data", "allowed")
-
-    import sqlite3
-
-    # Read project classifications and approval flags from the database.
-    with sqlite3.connect(DATABASE_PATH) as connection:
-        connection.row_factory = sqlite3.Row
-
-        projects = connection.execute(
-            """
-            SELECT project_id, project_name, project_status,
-                   classification, ai_access
-            FROM department_projects
-            ORDER BY project_id
-            """
-        ).fetchall()
-
-    # Filter records before returning anything to the requesting application.
-    approved_projects = []
-
-    for project in projects:
-        if is_ai_data_allowed(
-            project["classification"],
-            project["ai_access"],
-        ):
-            # Return only the fields approved for this demonstration endpoint.
-            approved_projects.append({
-                "project_id": project["project_id"],
-                "project_name": project["project_name"],
-                "project_status": project["project_status"],
-            })
-
-    return approved_projects
 
 @app.get("/operations/ingestion-status")
 def get_ingestion_status(

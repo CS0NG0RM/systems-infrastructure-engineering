@@ -35,3 +35,6 @@ data/incoming/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Docker persistent storage
+docker-data/

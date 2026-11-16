@@ -1,0 +1,50 @@
+
+# Version control and local development configuration
+.git
+.gitignore
+.vscode/
+.idea/
+
+# Python virtual environments and caches
+.venv/
+.venv-prefect/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local databases and database sidecar files
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+
+# Logs, credentials, and environment files
+logs/
+*.log
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local data and incoming files
+data/
+
+# Backups and temporary files
+*backup*
+*.bak
+*.tmp
+
+# Local test artifacts
+.coverage
+htmlcov/
+
+# Docker persistent storage
+docker-data/
+
+# Unit and integration tests
+test_*.py

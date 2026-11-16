@@ -463,3 +463,109 @@ def test_approved_financial_correction(
 
     print("PASS: Previously consumed approval rejected on replay")
     print("PASS: Original financial amount preserved after replay")
+
+def test_failed_correction_rolls_back_approval_consumption(
+    tmp_path, monkeypatch
+):
+    """A failed financial update must not consume its approval."""
+
+    database_path = tmp_path / "atomicity_test.db"
+    csv_path = tmp_path / "correction.csv"
+
+    monkeypatch.setattr(ingest_finance, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(ingest_finance, "DATABASE_PATH", database_path)
+    monkeypatch.setattr(
+        identity, "IDENTITY_DATABASE_PATH", tmp_path / "identity.db"
+    )
+
+    ingest_finance.initialize_database()
+    ingest_finance.initialize_ingestion_history()
+    identity.initialize_identity_registry()
+
+    transaction = {
+        "transaction_id": "990020",
+        "transaction_date": "2026-07-01",
+        "business_unit": "Strategy Consulting",
+        "cost_center": "STR-001",
+        "project_id": "STR-TEST-020",
+        "client_id": "CL-001",
+        "transaction_type": "Revenue",
+        "category": "Consulting Fees",
+        "description": "Atomicity regression test",
+        "counterparty_id": "CLIENT-001",
+        "amount_eur": "12500",
+        "classification": "confidential",
+        "source_system": "Test ERP",
+    }
+
+    def write_csv(record):
+        with csv_path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=record.keys())
+            writer.writeheader()
+            writer.writerow(record)
+
+    # Insert the original transaction.
+    write_csv(transaction)
+    ingest_finance.ingest_transactions(csv_path)
+
+    # Prepare and authorize a changed financial amount.
+    corrected = dict(transaction, amount_eur="11500")
+    corrected_csv = tmp_path / "approved_correction.csv"
+
+    with corrected_csv.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=corrected.keys())
+        writer.writeheader()
+        writer.writerow(corrected)
+
+    with sqlite3.connect(database_path) as connection:
+        create_correction_approval(
+            connection,
+            corrected,
+            "demo-finance-approver-token",
+        )
+
+        # This trigger deliberately rejects the financial update.
+        connection.execute("""
+            CREATE TRIGGER reject_financial_update
+            BEFORE UPDATE ON consulting_transactions
+            BEGIN
+                SELECT RAISE(ABORT, 'Simulated financial update failure');
+            END
+        """)
+
+    # Approval consumption happens before the deliberately failed update.
+    with pytest.raises(
+        sqlite3.IntegrityError,
+        match="Simulated financial update failure",
+    ):
+        ingest_finance.ingest_transactions(corrected_csv)
+
+    with sqlite3.connect(database_path) as connection:
+        amount = connection.execute(
+            """
+            SELECT amount_eur
+            FROM consulting_transactions
+            WHERE transaction_id = 990020
+            """
+        ).fetchone()[0]
+
+        consumed_at = connection.execute(
+            """
+            SELECT consumed_at
+            FROM finance_correction_approvals
+            WHERE transaction_id = 990020
+            """
+        ).fetchone()[0]
+
+        failure_status = connection.execute(
+            """
+            SELECT status
+            FROM finance_ingestion_history
+            WHERE file_path = ?
+            """,
+            ("approved_correction.csv",),
+        ).fetchone()
+
+    assert amount == 12500.0
+    assert consumed_at is None
+    assert failure_status == ("failed",)

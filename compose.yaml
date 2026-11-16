@@ -1,0 +1,32 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: enterprise-secure-api
+    restart: "no"
+
+    environment:
+      ENTERPRISE_DATA_DIR: /app-data
+
+    volumes:
+      - ./docker-data/api:/app-data
+
+    networks:
+      - isolated-api
+
+    security_opt:
+      - no-new-privileges:true
+
+    cap_drop:
+      - ALL
+
+    read_only: true
+
+    tmpfs:
+      - /tmp
+
+networks:
+  isolated-api:
+    internal: true
