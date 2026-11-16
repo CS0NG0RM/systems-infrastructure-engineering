@@ -31,7 +31,9 @@ def validate_transaction(transaction):
 
     # Reject records with missing or empty mandatory fields.
     for field in required_fields:
-        if not str(transaction.get(field, "")).strip():
+        value = transaction.get(field)
+
+        if value is None or not str(value).strip():
             raise ValueError(f"Missing required field: {field}")
 
     # Transaction IDs must be positive integers.

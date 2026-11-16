@@ -88,6 +88,7 @@ def test_valid_negative_financial_adjustments(
         ("Revenue", "Credit Note", "0"),
     ],
 )
+
 def test_invalid_financial_adjustments(
     transaction_type, category, amount
 ):
@@ -98,4 +99,14 @@ def test_invalid_financial_adjustments(
     transaction["amount_eur"] = amount
 
     with pytest.raises(ValueError, match="Invalid transaction amount"):
+        validate_transaction(transaction)
+
+
+def test_required_field_cannot_be_none():
+    """Reject missing values in mandatory transaction fields."""
+
+    transaction = sample_transaction()
+    transaction["business_unit"] = None
+
+    with pytest.raises(ValueError, match="Missing required field: business_unit"):
         validate_transaction(transaction)

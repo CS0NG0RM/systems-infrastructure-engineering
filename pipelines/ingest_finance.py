@@ -1,6 +1,7 @@
 import csv
 import sqlite3
 import hashlib
+from contextlib import contextmanager
 from pathlib import Path
 
 from pipelines.validate_finance import validate_transaction
@@ -89,7 +90,7 @@ def ingest_transactions(csv_path=None):
 
     # Process the import as one database transaction.
     # If validation fails, the current batch is rolled back.
-    with sqlite3.connect(DATABASE_PATH) as connection:
+    with track_ingestion_failure(relative_path, file_hash), sqlite3.connect(DATABASE_PATH) as connection:
         for transaction in transactions:
 
             # Reject incomplete or invalid financial records before insertion.
@@ -206,8 +207,40 @@ def calculate_file_hash(csv_path):
 
     return file_hash.hexdigest()
 
+def record_ingestion_failure(relative_path, file_hash, error_message):
+    """Save a failed import separately from the transaction batch."""
+
+    with sqlite3.connect(DATABASE_PATH) as connection:
+        connection.execute(
+            """
+            INSERT INTO finance_ingestion_history (
+                file_path,
+                file_hash,
+                status,
+                error_message,
+                processed_at
+            )
+            VALUES (?, ?, 'failed', ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(file_path, file_hash) DO UPDATE SET
+                status = 'failed',
+                error_message = excluded.error_message,
+                processed_at = CURRENT_TIMESTAMP
+            """,
+            (relative_path, file_hash, str(error_message)),
+        )
+
+@contextmanager
+def track_ingestion_failure(relative_path, file_hash):
+    """Record an import failure after the database transaction rolls back."""
+    try:
+        yield
+    except Exception as error:
+        record_ingestion_failure(relative_path, file_hash, str(error))
+        raise
+
+
 def initialize_ingestion_history():
-    """Create a table to track successfully processed Finance files."""
+    """Create and update the Finance ingestion history table."""
 
     # Store file fingerprints so unchanged exports can be skipped safely.
     with sqlite3.connect(DATABASE_PATH) as connection:
@@ -218,10 +251,23 @@ def initialize_ingestion_history():
                 file_hash TEXT NOT NULL,
                 processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 status TEXT NOT NULL,
+                error_message TEXT,
                 PRIMARY KEY (file_path, file_hash)
             )
             """
         )
+
+        columns = {
+            row[1]
+            for row in connection.execute(
+                "PRAGMA table_info(finance_ingestion_history)"
+            )
+        }
+
+        if "error_message" not in columns:
+            connection.execute(
+                "ALTER TABLE finance_ingestion_history ADD COLUMN error_message TEXT"
+            )
 
 def is_file_processed(csv_path):
     """Check whether this exact version of a file was imported successfully."""

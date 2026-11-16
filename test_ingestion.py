@@ -1,6 +1,8 @@
 import csv
 import sqlite3
 
+import pytest
+
 from pipelines import ingest_finance
 
 
@@ -64,3 +66,116 @@ def test_transaction_corrections(tmp_path, monkeypatch, capsys):
 
     # The correction replaces the amount without duplicating the transaction.
     assert records == [(990001, 11500.0)]
+
+def test_invalid_batch_rolls_back(tmp_path, monkeypatch):
+    """Reject the entire batch if one transaction is invalid."""
+
+    database_path = tmp_path / "test_enterprise.db"
+    csv_path = tmp_path / "invalid_batch.csv"
+
+    monkeypatch.setattr(ingest_finance, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(ingest_finance, "DATABASE_PATH", database_path)
+
+    ingest_finance.initialize_database()
+    ingest_finance.initialize_ingestion_history()
+
+    valid_transaction = {
+        "transaction_id": "990002",
+        "transaction_date": "2026-07-01",
+        "business_unit": "Strategy Consulting",
+        "cost_center": "STR-001",
+        "project_id": "STR-TEST-002",
+        "client_id": "CL-001",
+        "transaction_type": "Revenue",
+        "category": "Consulting Fees",
+        "description": "Valid batch transaction",
+        "counterparty_id": "CLIENT-001",
+        "amount_eur": "12500",
+        "classification": "confidential",
+        "source_system": "Test ERP",
+    }
+
+    invalid_transaction = valid_transaction.copy()
+    invalid_transaction["transaction_id"] = "990003"
+    invalid_transaction["business_unit"] = ""
+
+    with csv_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=valid_transaction.keys())
+        writer.writeheader()
+        writer.writerows([valid_transaction, invalid_transaction])
+
+    with pytest.raises(ValueError, match="Missing required field: business_unit"):
+        ingest_finance.ingest_transactions(csv_path)
+
+    with sqlite3.connect(database_path) as connection:
+        transaction_count = connection.execute(
+            "SELECT COUNT(*) FROM consulting_transactions"
+        ).fetchone()[0]
+
+        completed_count = connection.execute(
+            """
+            SELECT COUNT(*)
+            FROM finance_ingestion_history
+            WHERE status = 'completed'
+            """
+        ).fetchone()[0]
+
+    assert transaction_count == 0
+    assert completed_count == 0
+
+
+def test_failed_import_records_error(tmp_path, monkeypatch):
+    """Record a rejected import without saving its transactions."""
+
+    database_path = tmp_path / "test_enterprise.db"
+    csv_path = tmp_path / "invalid_import.csv"
+
+    monkeypatch.setattr(ingest_finance, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(ingest_finance, "DATABASE_PATH", database_path)
+
+    ingest_finance.initialize_database()
+    ingest_finance.initialize_ingestion_history()
+
+    transaction = {
+        "transaction_id": "990004",
+        "transaction_date": "2026-07-01",
+        "business_unit": "",
+        "cost_center": "STR-001",
+        "project_id": "STR-TEST-004",
+        "client_id": "CL-001",
+        "transaction_type": "Revenue",
+        "category": "Consulting Fees",
+        "description": "Invalid import test",
+        "counterparty_id": "CLIENT-001",
+        "amount_eur": "12500",
+        "classification": "confidential",
+        "source_system": "Test ERP",
+    }
+
+    with csv_path.open("w", newline="", encoding="utf-8") as file:
+        writer = csv.DictWriter(file, fieldnames=transaction.keys())
+        writer.writeheader()
+        writer.writerow(transaction)
+
+    with pytest.raises(ValueError, match="Missing required field: business_unit"):
+        ingest_finance.ingest_transactions(csv_path)
+
+    with sqlite3.connect(database_path) as connection:
+        history = connection.execute(
+            """
+            SELECT status, error_message
+            FROM finance_ingestion_history
+            WHERE file_path = ?
+            """,
+            (csv_path.name,),
+        ).fetchone()
+
+        transaction_count = connection.execute(
+            "SELECT COUNT(*) FROM consulting_transactions"
+        ).fetchone()[0]
+
+    assert history == (
+        "failed",
+        "Missing required field: business_unit",
+    )
+    assert transaction_count == 0
