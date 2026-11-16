@@ -1,19 +1,15 @@
 import csv
 import sqlite3
-from pathlib import Path
 
-
-# Locate the departmental source file and central enterprise database.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATABASE_PATH = PROJECT_ROOT / "enterprise.db"
-CSV_PATH = PROJECT_ROOT / "data" / "departments" / "strategy_projects.csv"
-
+from config import DATABASE_PATH, DEPARTMENT_PROJECTS_CSV
 
 def ingest_projects():
     """Import departmental consulting projects into the enterprise database."""
 
     # Read the team's project register, including active and pipeline projects.
-    with CSV_PATH.open(newline="", encoding="utf-8-sig") as file:
+    with DEPARTMENT_PROJECTS_CSV.open(
+            newline="", encoding="utf-8-sig"
+    ) as file:
         projects = list(csv.DictReader(file))
 
     inserted = 0

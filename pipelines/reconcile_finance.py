@@ -1,10 +1,6 @@
 import sqlite3
-from pathlib import Path
 
-
-# Use the shared enterprise database for financial reconciliation.
-DATABASE_PATH = Path(__file__).resolve().parent.parent / "enterprise.db"
-
+from config import DATABASE_PATH
 
 def reconcile_projects(database_path=None):
     """Compare active project fees with revenue recorded in Finance."""

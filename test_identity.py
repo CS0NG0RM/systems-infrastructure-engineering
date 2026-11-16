@@ -262,3 +262,116 @@ def test_credential_rotation():
 
     # A revoked credential cannot be rotated again.
     assert rotate_credential("finance-001", old_token) is None
+
+@pytest.mark.parametrize(
+    "status_column, status_value",
+    [
+        ("revoked_at", "2026-11-16T00:00:00+00:00"),
+        ("expires_at", "2020-01-01T00:00:00+00:00"),
+    ],
+)
+def test_revoked_and_expired_credentials_are_rejected_by_api(
+    status_column, status_value, tmp_path, monkeypatch
+):
+    """Verify revoked and expired credentials cannot access protected APIs."""
+
+    token = "demo-finance-token"
+
+    # Keep API audit events isolated.
+    log_path = tmp_path / "security_audit.jsonl"
+    monkeypatch.setattr(
+        audit_log,
+        "AUDIT_LOG_PATH",
+        log_path,
+    )
+
+    # Revoke or expire the registered Finance credential.
+    with sqlite3.connect(
+        identity_module.IDENTITY_DATABASE_PATH
+    ) as connection:
+        connection.execute(
+            f"""
+            UPDATE credentials
+            SET {status_column} = ?
+            WHERE token_hash = ?
+            """,
+            (status_value, hash_credential(token)),
+        )
+
+    # Attempt to access the protected Finance API.
+    client = TestClient(app)
+
+    response = client.get(
+        "/finance/projects",
+        headers={"x-demo-token": token},
+    )
+
+    assert response.status_code == 401
+    assert response.json()["detail"] == "Authentication required"
+
+    # Verify that the failed authentication was audited.
+    events = [
+        json.loads(line)
+        for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert len(events) == 1
+    assert events[0]["role"] == "unauthenticated"
+    assert events[0]["resource"] == "finance_reports"
+    assert events[0]["decision"] == "denied"
+
+def test_credential_rotation_is_enforced_by_api(tmp_path, monkeypatch):
+    """Verify credential rotation is enforced across protected API endpoints."""
+
+    old_token = "demo-finance-token"
+
+    # Isolate security audit events.
+    log_path = tmp_path / "security_audit.jsonl"
+    monkeypatch.setattr(
+        audit_log,
+        "AUDIT_LOG_PATH",
+        log_path,
+    )
+
+    client = TestClient(app)
+
+    # Confirm the original credential initially grants Finance access.
+    original_response = client.get(
+        "/finance/projects",
+        headers={"x-demo-token": old_token},
+    )
+
+    assert original_response.status_code == 200
+
+    # Rotate the Finance credential.
+    new_token = rotate_credential("finance-001", old_token)
+
+    assert new_token is not None
+
+    # The original credential must now be rejected.
+    old_response = client.get(
+        "/finance/projects",
+        headers={"x-demo-token": old_token},
+    )
+
+    assert old_response.status_code == 401
+
+    # The replacement credential must retain Finance permissions.
+    new_response = client.get(
+        "/finance/projects",
+        headers={"x-demo-token": new_token},
+    )
+
+    assert new_response.status_code == 200
+
+    # Verify the failed authentication was recorded.
+    events = [
+        json.loads(line)
+        for line in log_path.read_text(encoding="utf-8").splitlines()
+    ]
+
+    assert any(
+        event["role"] == "unauthenticated"
+        and event["decision"] == "denied"
+        for event in events
+    )

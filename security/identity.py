@@ -2,14 +2,9 @@ import hashlib
 import secrets
 import sqlite3
 from dataclasses import dataclass
-from pathlib import Path
+from config import IDENTITY_DATABASE_PATH
 from datetime import datetime, timezone
 from uuid import uuid4
-
-
-# Keep identity records separate from Finance and departmental data.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-IDENTITY_DATABASE_PATH = PROJECT_ROOT / "identity.db"
 
 
 @dataclass(frozen=True)
@@ -26,6 +21,9 @@ class Identity:
 DEMO_IDENTITIES = {
     "demo-employee-token": Identity("employee-001", "human", "employee"),
     "demo-finance-token": Identity("finance-001", "human", "finance"),
+    "demo-finance-approver-token": Identity(
+        "finance-approver-001", "human", "finance_approver"
+    ),
     "demo-strategy-token": Identity("strategy-001", "human", "strategy"),
     "demo-ai-token": Identity("ai-service-001", "service", "ai_service"),
 }

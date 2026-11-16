@@ -8,6 +8,7 @@ from security.access_policy import (
 from security.audit_log import record_access_event
 from security.dependencies import require_identity
 from security.identity import Identity
+from config import DATABASE_PATH
 
 # Create the API application.
 app = FastAPI(title="Secure Enterprise Data & AI Platform")
@@ -23,8 +24,6 @@ DOCUMENTS = {
 def health_check():
     """Check API availability and read-only database connectivity."""
     import sqlite3
-
-    from pipelines.ingest_finance import DATABASE_PATH
 
     try:
         database_uri = DATABASE_PATH.resolve().as_uri() + "?mode=ro"
@@ -129,11 +128,8 @@ def get_strategy_projects(
 
     # Retrieve project information without returning confidential fee figures.
     import sqlite3
-    from pathlib import Path
 
-    database_path = Path(__file__).resolve().parent / "enterprise.db"
-
-    with sqlite3.connect(database_path) as connection:
+    with sqlite3.connect(DATABASE_PATH) as connection:
         connection.row_factory = sqlite3.Row
 
         projects = connection.execute(
@@ -165,12 +161,9 @@ def get_ai_approved_projects(
     record_access_event(role, "ai_approved_data", "allowed")
 
     import sqlite3
-    from pathlib import Path
-
-    database_path = Path(__file__).resolve().parent / "enterprise.db"
 
     # Read project classifications and approval flags from the database.
-    with sqlite3.connect(database_path) as connection:
+    with sqlite3.connect(DATABASE_PATH) as connection:
         connection.row_factory = sqlite3.Row
 
         projects = connection.execute(
@@ -205,8 +198,6 @@ def get_ingestion_status(
 ):
     """Return aggregate Finance ingestion statistics to authorised users."""
     import sqlite3
-
-    from pipelines.ingest_finance import DATABASE_PATH
 
     role = identity.role
 

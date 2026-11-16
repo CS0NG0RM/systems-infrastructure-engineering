@@ -5,12 +5,16 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from pipelines.validate_finance import validate_transaction
-
-
-# Keep project files and the database in predictable locations.
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DATABASE_PATH = PROJECT_ROOT / "enterprise.db"
-
+from security.finance_integrity import (
+    initialize_correction_approvals,
+    calculate_correction_hash,
+    consume_correction_approval,
+)
+from config import (
+    DATABASE_PATH,
+    DEFAULT_FINANCE_CSV,
+    PROJECT_ROOT,
+)
 
 def initialize_database():
     """Create the central Finance table if it does not already exist."""
@@ -65,7 +69,7 @@ def ingest_transactions(csv_path=None):
 
     # Use the original Finance export unless another file is provided.
     if csv_path is None:
-        csv_path = PROJECT_ROOT / "data" / "consulting_finance_transactions.csv"
+            csv_path = DEFAULT_FINANCE_CSV
 
     csv_path = Path(csv_path)
 
@@ -91,6 +95,10 @@ def ingest_transactions(csv_path=None):
     # Process the import as one database transaction.
     # If validation fails, the current batch is rolled back.
     with track_ingestion_failure(relative_path, file_hash), sqlite3.connect(DATABASE_PATH) as connection:
+
+        # Initialize the approval registry once per ingestion batch.
+        initialize_correction_approvals(connection)
+
         for transaction in transactions:
 
             # Reject incomplete or invalid financial records before insertion.
@@ -104,6 +112,59 @@ def ingest_transactions(csv_path=None):
                 """,
                 (int(transaction["transaction_id"]),),
             ).fetchone()
+
+            # Require an exact, unused approval before changing an existing record.
+            if existing is not None:
+                current_record = connection.execute(
+                    """
+                    SELECT
+                        transaction_id,
+                        transaction_date,
+                        business_unit,
+                        cost_center,
+                        project_id,
+                        client_id,
+                        transaction_type,
+                        category,
+                        description,
+                        counterparty_id,
+                        amount_eur,
+                        classification,
+                        source_system
+                    FROM consulting_transactions
+                    WHERE transaction_id = ?
+                    """,
+                    (int(transaction["transaction_id"]),),
+                ).fetchone()
+
+                incoming_record = dict(transaction)
+                incoming_record["transaction_id"] = int(
+                    incoming_record["transaction_id"]
+                )
+                incoming_record["amount_eur"] = float(
+                    incoming_record["amount_eur"]
+                )
+
+                current_fields = (
+                    "transaction_id",
+                    "transaction_date",
+                    "business_unit",
+                    "cost_center",
+                    "project_id",
+                    "client_id",
+                    "transaction_type",
+                    "category",
+                    "description",
+                    "counterparty_id",
+                    "amount_eur",
+                    "classification",
+                    "source_system",
+                )
+
+                current_values = dict(zip(current_fields, current_record))
+
+                if calculate_correction_hash(current_values) != calculate_correction_hash(incoming_record):
+                    consume_correction_approval(connection, incoming_record)
 
             # Use parameterized SQL to insert new transactions or update corrections.
             # Identical records are left unchanged.

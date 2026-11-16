@@ -4,6 +4,8 @@ import sqlite3
 import pytest
 
 from pipelines import ingest_finance
+from security import identity
+from security.finance_integrity import create_correction_approval
 
 
 def test_transaction_corrections(tmp_path, monkeypatch, capsys):
@@ -12,6 +14,12 @@ def test_transaction_corrections(tmp_path, monkeypatch, capsys):
 
     monkeypatch.setattr(ingest_finance, "PROJECT_ROOT", tmp_path)
     monkeypatch.setattr(ingest_finance, "DATABASE_PATH", database_path)
+    monkeypatch.setattr(
+    identity,
+    "IDENTITY_DATABASE_PATH",
+    tmp_path / "test_identity.db",
+                        )
+    identity.initialize_identity_registry()
 
     ingest_finance.initialize_database()
     ingest_finance.initialize_ingestion_history()
@@ -46,6 +54,31 @@ def test_transaction_corrections(tmp_path, monkeypatch, capsys):
     # First export inserts the transaction.
     first = import_test_transaction("original.csv", 12500)
     assert "Transactions inserted: 1" in first
+
+    # Prepare the exact proposed correction.
+    proposed_correction = {
+        "transaction_id": 990001,
+        "transaction_date": "2026-07-01",
+        "business_unit": "Strategy Consulting",
+        "cost_center": "STR-001",
+        "project_id": "STR-TEST-001",
+        "client_id": "CL-001",
+        "transaction_type": "Revenue",
+        "category": "Consulting Fees",
+        "description": "Correction test transaction",
+        "counterparty_id": "CLIENT-001",
+        "amount_eur": 11500.0,
+        "classification": "confidential",
+        "source_system": "Test ERP",
+    }
+
+    # Authorize the exact correction.
+    with sqlite3.connect(database_path) as connection:
+        create_correction_approval(
+            connection,
+            proposed_correction,
+            "demo-finance-approver-token",
+        )
 
     # Corrected export updates the existing transaction.
     second = import_test_transaction("corrected.csv", 11500)
@@ -180,12 +213,19 @@ def test_failed_import_records_error(tmp_path, monkeypatch):
     )
     assert transaction_count == 0
 
-def test_security_financial_data_poisoning(tmp_path, monkeypatch, capsys):
-    """SEC-BIZ-001: Test whether a manipulated CSV can overwrite revenue."""
+
+def test_security_financial_data_poisoning(
+    tmp_path, monkeypatch, capsys
+):
+    """SEC-BIZ-001: Reject unauthorized financial transaction manipulation."""
     database_path = tmp_path / "security_test.db"
 
-    monkeypatch.setattr(ingest_finance, "PROJECT_ROOT", tmp_path)
-    monkeypatch.setattr(ingest_finance, "DATABASE_PATH", database_path)
+    monkeypatch.setattr(
+        ingest_finance, "PROJECT_ROOT", tmp_path
+    )
+    monkeypatch.setattr(
+        ingest_finance, "DATABASE_PATH", database_path
+    )
 
     ingest_finance.initialize_database()
     ingest_finance.initialize_ingestion_history()
@@ -209,34 +249,217 @@ def test_security_financial_data_poisoning(tmp_path, monkeypatch, capsys):
             "source_system": "Test ERP",
         }
 
-        with csv_path.open("w", newline="", encoding="utf-8") as file:
-            writer = csv.DictWriter(file, fieldnames=transaction.keys())
+        with csv_path.open(
+            "w", newline="", encoding="utf-8"
+        ) as file:
+            writer = csv.DictWriter(
+                file, fieldnames=transaction.keys()
+            )
             writer.writeheader()
             writer.writerow(transaction)
 
         ingest_finance.ingest_transactions(csv_path)
-        capsys.readouterr()
+        return capsys.readouterr().out
 
     # Establish the legitimate financial record.
     import_csv("original.csv", 12500)
 
     with sqlite3.connect(database_path) as connection:
         original_amount = connection.execute(
-            "SELECT amount_eur FROM consulting_transactions WHERE transaction_id = ?",
+            """
+            SELECT amount_eur
+            FROM consulting_transactions
+            WHERE transaction_id = ?
+            """,
             (990001,),
         ).fetchone()[0]
 
-    # Simulate a manipulated source file reusing the same transaction ID.
-    import_csv("manipulated.csv", 1)
+    # Attempt an unauthorized financial manipulation.
+    from security.finance_integrity import UnapprovedCorrectionError
+
+    with pytest.raises(UnapprovedCorrectionError):
+        import_csv("manipulated.csv", 1)
 
     with sqlite3.connect(database_path) as connection:
-        modified_amount = connection.execute(
-            "SELECT amount_eur FROM consulting_transactions WHERE transaction_id = ?",
+        rejected_amount = connection.execute(
+            """
+            SELECT amount_eur
+            FROM consulting_transactions
+            WHERE transaction_id = ?
+            """,
             (990001,),
         ).fetchone()[0]
 
+        failed_import = connection.execute(
+            """
+            SELECT status
+            FROM finance_ingestion_history
+            WHERE file_path = ?
+            """,
+            ("manipulated.csv",),
+        ).fetchone()
+
     print(f"SEC-BIZ-001 original amount: EUR {original_amount}")
-    print(f"SEC-BIZ-001 modified amount: EUR {modified_amount}")
+    print(f"SEC-BIZ-001 amount after rejected manipulation: EUR {rejected_amount}")
 
     assert original_amount == 12500.0
-    assert modified_amount == 1.0
+    assert rejected_amount == 12500.0
+    assert failed_import == ("failed",)
+
+def test_approved_financial_correction(
+    tmp_path, monkeypatch, capsys
+):
+    """Verify an authorized correction succeeds through actual ingestion."""
+
+    database_path = tmp_path / "approved_correction.db"
+
+    monkeypatch.setattr(
+        ingest_finance, "PROJECT_ROOT", tmp_path
+    )
+    monkeypatch.setattr(
+        ingest_finance, "DATABASE_PATH", database_path
+    )
+    monkeypatch.setattr(
+    identity,
+    "IDENTITY_DATABASE_PATH",
+    tmp_path / "test_identity.db",
+    )
+
+    ingest_finance.initialize_database()
+    ingest_finance.initialize_ingestion_history()
+    identity.initialize_identity_registry()
+
+    def create_csv(filename, amount):
+        csv_path = tmp_path / filename
+
+        transaction = {
+            "transaction_id": "990010",
+            "transaction_date": "2026-07-01",
+            "business_unit": "Strategy Consulting",
+            "cost_center": "STR-001",
+            "project_id": "STR-TEST-010",
+            "client_id": "CL-001",
+            "transaction_type": "Revenue",
+            "category": "Consulting Fees",
+            "description": "Approved correction test",
+            "counterparty_id": "CLIENT-001",
+            "amount_eur": str(amount),
+            "classification": "confidential",
+            "source_system": "Test ERP",
+        }
+
+        with csv_path.open(
+            "w", newline="", encoding="utf-8"
+        ) as file:
+            writer = csv.DictWriter(
+                file, fieldnames=transaction.keys()
+            )
+            writer.writeheader()
+            writer.writerow(transaction)
+
+        return csv_path, transaction
+
+    # Insert the original financial transaction.
+    original_csv, _ = create_csv("approved_original.csv", 12500)
+    ingest_finance.ingest_transactions(original_csv)
+    capsys.readouterr()
+
+    # Prepare the exact proposed correction.
+    corrected_csv, corrected_record = create_csv(
+        "approved_correction.csv", 11500
+    )
+
+    # Authorize the correction using the dedicated Finance approver.
+    with sqlite3.connect(database_path) as connection:
+        from security.finance_integrity import (
+            initialize_correction_approvals,
+        )
+
+        initialize_correction_approvals(connection)
+
+        create_correction_approval(
+            connection,
+            corrected_record,
+            "demo-finance-approver-token",
+        )
+
+    # Process the approved correction through the real ingestion function.
+    output = ingest_finance.ingest_transactions(corrected_csv)
+    captured = capsys.readouterr().out
+
+    with sqlite3.connect(database_path) as connection:
+        amount = connection.execute(
+            """
+            SELECT amount_eur
+            FROM consulting_transactions
+            WHERE transaction_id = ?
+            """,
+            (990010,),
+        ).fetchone()[0]
+
+        approval = connection.execute(
+            """
+            SELECT consumed_at
+            FROM finance_correction_approvals
+            WHERE transaction_id = ?
+            """,
+            (990010,),
+        ).fetchone()
+
+    assert "Transactions updated: 1" in captured
+    assert amount == 11500.0
+    assert approval is not None
+    assert approval[0] is not None
+
+    print("PASS: Authorized correction accepted")
+    print("PASS: Financial amount updated to EUR 11,500")
+    print("PASS: Approval consumption recorded")
+
+
+    # Simulate restoration of the original record before a replay attempt.
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            """
+            UPDATE consulting_transactions
+            SET amount_eur = ?
+            WHERE transaction_id = ?
+            """,
+            (12500.0, 990010),
+        )
+
+    # Create a new import file containing the previously approved correction.
+    replay_csv, _ = create_csv(
+        "approved_correction_replay.csv", 11500
+    )
+
+    from security.finance_integrity import UnapprovedCorrectionError
+
+    # The previously consumed approval must not authorize another correction.
+    with pytest.raises(UnapprovedCorrectionError):
+        ingest_finance.ingest_transactions(replay_csv)
+
+    # Verify that the restored financial record remains unchanged.
+    with sqlite3.connect(database_path) as connection:
+        replay_amount = connection.execute(
+            """
+            SELECT amount_eur
+            FROM consulting_transactions
+            WHERE transaction_id = ?
+            """,
+            (990010,),
+        ).fetchone()[0]
+
+        replay_status = connection.execute(
+            """
+            SELECT status
+            FROM finance_ingestion_history
+            WHERE file_path = ?
+            """,
+            ("approved_correction_replay.csv",),
+        ).fetchone()
+
+    assert replay_amount == 12500.0
+    assert replay_status == ("failed",)
+
+    print("PASS: Previously consumed approval rejected on replay")
+    print("PASS: Original financial amount preserved after replay")
