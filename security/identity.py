@@ -1,4 +1,12 @@
+
+import sqlite3
 from dataclasses import dataclass
+from pathlib import Path
+
+
+# Keep identity records separate from Finance and departmental data.
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+IDENTITY_DATABASE_PATH = PROJECT_ROOT / "identity.db"
 
 
 @dataclass(frozen=True)
@@ -20,30 +28,79 @@ DEMO_IDENTITIES = {
 }
 
 
-# Maintain the activation status of registered identities.
-# All fictional identities start as enabled.
-IDENTITY_STATUS = {
-    identity.identity_id: True
-    for identity in DEMO_IDENTITIES.values()
-}
+def initialize_identity_registry():
+    """Create the persistent identity registry and register demo identities."""
+
+    with sqlite3.connect(IDENTITY_DATABASE_PATH) as connection:
+        # Store identity attributes and activation status independently of Finance.
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS identities (
+                identity_id TEXT PRIMARY KEY,
+                identity_type TEXT NOT NULL,
+                role TEXT NOT NULL,
+                enabled INTEGER NOT NULL DEFAULT 1
+                    CHECK (enabled IN (0, 1))
+            )
+            """
+        )
+
+        # Register new identities without resetting existing activation states.
+        connection.executemany(
+            """
+            INSERT OR IGNORE INTO identities (
+                identity_id, identity_type, role, enabled
+            )
+            VALUES (?, ?, ?, 1)
+            """,
+            [
+                (identity.identity_id, identity.identity_type, identity.role)
+                for identity in DEMO_IDENTITIES.values()
+            ],
+        )
 
 
 def is_identity_enabled(identity_id: str) -> bool:
-    """Check whether a registered identity is enabled."""
+    """Check whether a registered identity is currently enabled."""
 
-    # Unknown identities are treated as disabled.
-    return IDENTITY_STATUS.get(identity_id, False)
+    # Ensure the registry exists before checking an identity's status.
+    initialize_identity_registry()
+
+    with sqlite3.connect(IDENTITY_DATABASE_PATH) as connection:
+        result = connection.execute(
+            """
+            SELECT enabled
+            FROM identities
+            WHERE identity_id = ?
+            """,
+            (identity_id,),
+        ).fetchone()
+
+    # Unknown identities are denied by default.
+    return bool(result[0]) if result is not None else False
 
 
 def set_identity_enabled(identity_id: str, enabled: bool) -> bool:
-    """Enable or disable a registered identity."""
+    """Enable or disable a registered identity persistently."""
 
-    # Only identities already present in the registry can be modified.
-    if identity_id not in IDENTITY_STATUS:
-        return False
+    if not isinstance(enabled, bool):
+        raise TypeError("Identity status must be a boolean")
 
-    IDENTITY_STATUS[identity_id] = enabled
-    return True
+    # Ensure that only registered identities can have their status changed.
+    initialize_identity_registry()
+
+    with sqlite3.connect(IDENTITY_DATABASE_PATH) as connection:
+        result = connection.execute(
+            """
+            UPDATE identities
+            SET enabled = ?
+            WHERE identity_id = ?
+            """,
+            (int(enabled), identity_id),
+        )
+
+        # Return False when the requested identity does not exist.
+        return result.rowcount == 1
 
 
 def authenticate_identity(token: str | None) -> Identity | None:
@@ -52,12 +109,13 @@ def authenticate_identity(token: str | None) -> Identity | None:
     if token is None:
         return None
 
+    # Resolve the supplied credential against the registered identities.
     identity = DEMO_IDENTITIES.get(token)
 
     if identity is None:
         return None
 
-    # Disabled identities cannot authenticate, even with a valid token.
+    # Disabled identities cannot authenticate with previously valid credentials.
     if not is_identity_enabled(identity.identity_id):
         return None
 

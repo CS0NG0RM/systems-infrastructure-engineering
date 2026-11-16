@@ -1,8 +1,6 @@
 import json
-import logging
 from datetime import datetime, timezone
 from pathlib import Path
-
 
 # Keep security events separate from application data.
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
