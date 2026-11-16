@@ -1,7 +1,7 @@
 import json
 import subprocess
 import sys
-
+import sqlite3
 import pytest
 from fastapi.testclient import TestClient
 
@@ -9,6 +9,7 @@ from main import app
 from security import audit_log, identity as identity_module
 from security.identity import (
     authenticate_identity,
+    hash_credential,
     initialize_identity_registry,
     is_identity_enabled,
     set_identity_enabled,
@@ -169,3 +170,67 @@ print("Persistent identity revocation verified")
 
     # Verify that the new process independently rejected the disabled identity.
     assert "Persistent identity revocation verified" in result.stdout
+
+def test_credential_hashing():
+    # The same credential must always produce the same fingerprint.
+    token = "test-service-credential"
+
+    first_hash = hash_credential(token)
+    second_hash = hash_credential(token)
+
+    assert first_hash == second_hash
+    assert first_hash != token
+
+    # Different credentials must produce different fingerprints.
+    assert hash_credential("another-credential") != first_hash
+    assert len(first_hash) == 64
+
+def test_revoked_credential_cannot_authenticate():
+    """Revoked credentials cannot authenticate an enabled identity."""
+
+    token = "demo-finance-token"
+
+    # Confirm the credential works before revocation.
+    assert authenticate_identity(token) is not None
+
+    with sqlite3.connect(identity_module.IDENTITY_DATABASE_PATH) as connection:
+        connection.execute(
+            """
+            UPDATE credentials
+            SET revoked_at = ?
+            WHERE token_hash = ?
+            """,
+            (
+                "2026-11-16T00:00:00+00:00",
+                hash_credential(token),
+            ),
+        )
+
+    # Revocation must not disable the underlying identity.
+    assert is_identity_enabled("finance-001") is True
+    assert authenticate_identity(token) is None
+
+def test_expired_credential_cannot_authenticate():
+    """Expired credentials cannot authenticate an enabled identity."""
+
+    token = "demo-strategy-token"
+
+    # Confirm the credential is valid before expiration.
+    assert authenticate_identity(token) is not None
+
+    with sqlite3.connect(identity_module.IDENTITY_DATABASE_PATH) as connection:
+        connection.execute(
+            """
+            UPDATE credentials
+            SET expires_at = ?
+            WHERE token_hash = ?
+            """,
+            (
+                "2020-01-01T00:00:00+00:00",
+                hash_credential(token),
+            ),
+        )
+
+    # Expiration must not disable the underlying identity.
+    assert is_identity_enabled("strategy-001") is True
+    assert authenticate_identity(token) is None
