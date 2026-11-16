@@ -12,6 +12,7 @@ from security.identity import (
     hash_credential,
     initialize_identity_registry,
     is_identity_enabled,
+    rotate_credential,
     set_identity_enabled,
 )
 
@@ -234,3 +235,30 @@ def test_expired_credential_cannot_authenticate():
     # Expiration must not disable the underlying identity.
     assert is_identity_enabled("strategy-001") is True
     assert authenticate_identity(token) is None
+
+
+def test_credential_rotation():
+    """Rotation replaces a credential without disabling its identity."""
+
+    old_token = "demo-finance-token"
+
+    assert authenticate_identity(old_token) is not None
+
+    new_token = rotate_credential("finance-001", old_token)
+
+    assert new_token is not None
+    assert new_token != old_token
+
+    # The old credential must no longer authenticate.
+    assert authenticate_identity(old_token) is None
+
+    # The replacement must authenticate as the same identity.
+    identity = authenticate_identity(new_token)
+
+    assert identity is not None
+    assert identity.identity_id == "finance-001"
+    assert identity.role == "finance"
+    assert is_identity_enabled("finance-001") is True
+
+    # A revoked credential cannot be rotated again.
+    assert rotate_credential("finance-001", old_token) is None

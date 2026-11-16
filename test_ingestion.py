@@ -179,3 +179,64 @@ def test_failed_import_records_error(tmp_path, monkeypatch):
         "Missing required field: business_unit",
     )
     assert transaction_count == 0
+
+def test_security_financial_data_poisoning(tmp_path, monkeypatch, capsys):
+    """SEC-BIZ-001: Test whether a manipulated CSV can overwrite revenue."""
+    database_path = tmp_path / "security_test.db"
+
+    monkeypatch.setattr(ingest_finance, "PROJECT_ROOT", tmp_path)
+    monkeypatch.setattr(ingest_finance, "DATABASE_PATH", database_path)
+
+    ingest_finance.initialize_database()
+    ingest_finance.initialize_ingestion_history()
+
+    def import_csv(filename, amount):
+        csv_path = tmp_path / filename
+
+        transaction = {
+            "transaction_id": "990001",
+            "transaction_date": "2026-07-01",
+            "business_unit": "Strategy Consulting",
+            "cost_center": "STR-001",
+            "project_id": "STR-TEST-001",
+            "client_id": "CL-001",
+            "transaction_type": "Revenue",
+            "category": "Consulting Fees",
+            "description": "Security test transaction",
+            "counterparty_id": "CLIENT-001",
+            "amount_eur": str(amount),
+            "classification": "confidential",
+            "source_system": "Test ERP",
+        }
+
+        with csv_path.open("w", newline="", encoding="utf-8") as file:
+            writer = csv.DictWriter(file, fieldnames=transaction.keys())
+            writer.writeheader()
+            writer.writerow(transaction)
+
+        ingest_finance.ingest_transactions(csv_path)
+        capsys.readouterr()
+
+    # Establish the legitimate financial record.
+    import_csv("original.csv", 12500)
+
+    with sqlite3.connect(database_path) as connection:
+        original_amount = connection.execute(
+            "SELECT amount_eur FROM consulting_transactions WHERE transaction_id = ?",
+            (990001,),
+        ).fetchone()[0]
+
+    # Simulate a manipulated source file reusing the same transaction ID.
+    import_csv("manipulated.csv", 1)
+
+    with sqlite3.connect(database_path) as connection:
+        modified_amount = connection.execute(
+            "SELECT amount_eur FROM consulting_transactions WHERE transaction_id = ?",
+            (990001,),
+        ).fetchone()[0]
+
+    print(f"SEC-BIZ-001 original amount: EUR {original_amount}")
+    print(f"SEC-BIZ-001 modified amount: EUR {modified_amount}")
+
+    assert original_amount == 12500.0
+    assert modified_amount == 1.0
