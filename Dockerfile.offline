@@ -6,3 +6,4 @@ COPY main.py config.py ./
 COPY pipelines/ ./pipelines/
 COPY security/ ./security/
 COPY app/ ./app/
+COPY ai_security/ ./ai_security/

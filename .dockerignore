@@ -48,3 +48,12 @@ docker-data/
 
 # Unit and integration tests
 test_*.py
+
+# Isolated verification and recovery workspaces
+migration-work/
+integration-work/
+recovery-work/
+
+# Nested Python caches and test files
+**/__pycache__/
+**/test_*.py
