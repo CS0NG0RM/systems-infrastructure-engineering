@@ -61,9 +61,15 @@ def calculate_correction_hash(transaction: dict) -> str:
     canonical_record["transaction_id"] = int(
         canonical_record["transaction_id"]
     )
-    canonical_record["amount_eur"] = float(
-        canonical_record["amount_eur"]
+    # Use exact integer cents for financial approval fingerprints.
+    from pipelines.money import eur_to_cents
+
+    canonical_record["amount_cents"] = eur_to_cents(
+        canonical_record.pop("amount_eur")
     )
+
+    # Distinguish exact monetary fingerprints from legacy approvals.
+    canonical_record["hash_version"] = 2
 
     serialized = json.dumps(
         canonical_record,

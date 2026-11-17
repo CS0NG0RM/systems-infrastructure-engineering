@@ -1,11 +1,13 @@
 from datetime import date
-from decimal import Decimal, InvalidOperation
+
+from pipelines.money import eur_to_cents
 
 
-# Only recognised transaction types and sensitivity levels are accepted.
+# Recognised transaction types and sensitivity levels.
 ALLOWED_CLASSIFICATIONS = {"public", "internal", "confidential", "restricted"}
 ALLOWED_TRANSACTION_TYPES = {"Revenue", "Expense"}
-# Negative amounts are permitted only for recognised financial adjustments.
+
+# Negative amounts are permitted only for recognised adjustments.
 NEGATIVE_AMOUNT_CATEGORIES = {
     "Revenue": {"Credit Note", "Revenue Reversal"},
     "Expense": {"Expense Refund"},
@@ -15,7 +17,6 @@ NEGATIVE_AMOUNT_CATEGORIES = {
 def validate_transaction(transaction):
     """Check that a financial record meets our data-quality rules."""
 
-    # These fields are required for reliable reporting and data classification.
     required_fields = [
         "transaction_id",
         "transaction_date",
@@ -29,7 +30,7 @@ def validate_transaction(transaction):
         "source_system",
     ]
 
-    # Reject records with missing or empty mandatory fields.
+    # Reject missing or empty mandatory fields.
     for field in required_fields:
         value = transaction.get(field)
 
@@ -53,32 +54,32 @@ def validate_transaction(transaction):
     except (TypeError, ValueError):
         raise ValueError("Invalid transaction date")
 
-    # Decimal avoids floating-point issues during financial validation.
+    # Enforce exact monetary precision and storage limits.
     try:
-        amount = Decimal(transaction["amount_eur"])
+        amount_cents = eur_to_cents(transaction["amount_eur"])
 
-        if not amount.is_finite():
-            raise ValueError("Amount must be finite")
-
-        # Zero amounts are invalid, and negative amounts need an approved category.
-        if amount == 0:
+        if amount_cents == 0:
             raise ValueError("Amount cannot be zero")
 
-        if amount < 0:
+        if amount_cents < 0:
             transaction_type = transaction["transaction_type"]
             category = transaction["category"]
 
-            if category not in NEGATIVE_AMOUNT_CATEGORIES.get(transaction_type, set()):
-                raise ValueError("Negative amount requires an approved adjustment category")
+            if category not in NEGATIVE_AMOUNT_CATEGORIES.get(
+                transaction_type, set()
+            ):
+                raise ValueError(
+                    "Negative amount requires an approved adjustment category"
+                )
 
-    except (InvalidOperation, TypeError, ValueError):
-        raise ValueError("Invalid transaction amount")
+    except (TypeError, ValueError) as error:
+        raise ValueError("Invalid transaction amount") from error
 
-    # Prevent unexpected transaction categories from entering financial reports.
+    # Reject unexpected transaction types.
     if transaction["transaction_type"] not in ALLOWED_TRANSACTION_TYPES:
         raise ValueError("Invalid transaction type")
 
-    # Reject unknown classifications rather than treating them as non-sensitive.
+    # Reject unknown data classifications.
     if transaction["classification"] not in ALLOWED_CLASSIFICATIONS:
         raise ValueError("Invalid data classification")
 

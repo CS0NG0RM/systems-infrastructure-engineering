@@ -212,3 +212,70 @@ def test_duplicate_approval_is_rejected(
             fictional_transaction,
             "demo-finance-approver-token",
         )
+
+def test_equivalent_amounts_produce_identical_hashes(fictional_transaction):
+    first = dict(fictional_transaction, amount_eur="11500.10")
+    second = dict(fictional_transaction, amount_eur="11500.1000")
+
+    assert calculate_correction_hash(first) == calculate_correction_hash(second)
+
+
+def test_one_cent_difference_changes_hash(fictional_transaction):
+    first = dict(fictional_transaction, amount_eur="11500.10")
+    second = dict(fictional_transaction, amount_eur="11500.11")
+
+    assert calculate_correction_hash(first) != calculate_correction_hash(second)
+
+
+def test_fractional_cent_hash_rejected(fictional_transaction):
+    transaction = dict(fictional_transaction, amount_eur="11500.105")
+
+    with pytest.raises(ValueError):
+        calculate_correction_hash(transaction)
+
+
+def test_legacy_approval_cannot_authorize_correction(
+    approval_database,
+    fictional_transaction,
+):
+    import hashlib
+    import json
+
+    legacy_record = dict(fictional_transaction)
+    legacy_record["transaction_id"] = int(legacy_record["transaction_id"])
+    legacy_record["amount_eur"] = float(legacy_record["amount_eur"])
+
+    serialized = json.dumps(
+        legacy_record,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+    legacy_hash = hashlib.sha256(
+        serialized.encode("utf-8")
+    ).hexdigest()
+
+    approval_database.execute(
+        """
+        INSERT INTO finance_correction_approvals (
+            transaction_id,
+            proposed_record_hash,
+            approved_by
+        )
+        VALUES (?, ?, ?)
+        """,
+        (1001, legacy_hash, "finance-approver-001"),
+    )
+
+    with pytest.raises(UnapprovedCorrectionError):
+        consume_correction_approval(
+            approval_database,
+            fictional_transaction,
+        )
+
+    approval = approval_database.execute(
+        "SELECT consumed_at FROM finance_correction_approvals"
+    ).fetchone()
+
+    assert approval == (None,)
