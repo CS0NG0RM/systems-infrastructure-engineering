@@ -1,0 +1,8 @@
+# Reuse the existing locally built application image.
+FROM enterprise-api-security-testing-api:latest
+
+# Include the updated application code.
+COPY main.py config.py ./
+COPY pipelines/ ./pipelines/
+COPY security/ ./security/
+COPY app/ ./app/
