@@ -1,321 +1,255 @@
-# Infrastructure Engineering & Containerization
+# Systems Reliability & Database Recovery
 
 ## 1. Overview
 
-I wanted to establish a containerized environment for the enterprise platform without treating infrastructure security as an afterthought.
+An important consideration when developing the enterprise platform was how to introduce changes without compromising existing financial records or creating unnecessary operational risks.
 
-The main objective was to isolate the application runtime, restrict its privileges, protect financial data and ensure that the application remained functional under these restrictions.
+I focused on three areas of reliability:
 
-The environment was developed locally using Windows, PowerShell, Docker Desktop and Linux-based containers.
+- Safe database schema evolution.
+- Repeatable financial data processing.
+- Database backup, restoration and integrity verification.
 
-## 2. Infrastructure Design
+All recovery exercises were conducted locally using fictional enterprise data and isolated verification environments.
 
-The application runs as a containerized FastAPI service using Uvicorn, with SQLite providing persistent relational storage.
+## 2. Database Migration and Regression Testing
 
-Application code and persistent data are separated so that rebuilding or replacing the container does not inherently require replacing the underlying database.
+During development, I identified a limitation in the original financial database schema. Monetary values were stored using SQLite REAL columns, which introduced unnecessary floating-point precision risks.
+
+To address this, the financial schema was redesigned to store monetary values as integer cents.
+
+However, changing the schema also introduced compatibility issues between existing databases and updated application components.
+
+An initial regression test identified three failures associated with outdated database columns:
+
+```text
+no such column: p.proposed_fee_cents
+```
+
+This highlighted the need for a controlled migration process rather than simply replacing the database schema or recreating the underlying data.
+
+### Migration approach
 
 ```mermaid
 flowchart TD
-    A[Windows Host] --> B[Docker Engine]
-    B --> C
-
-    subgraph C[Hardened Linux Container]
-        D[Uvicorn / FastAPI]
-        E[Application Services]
-        F[Security Controls]
-        G[Financial Processing]
-        D --> E
-        D --> F
-        E --> G
-    end
-
-    G --> H[(Persistent Financial Storage)]
-    F --> I[(Identity Storage)]
-    F --> J[Audit Logs]
+    A[Existing Financial Database] --> B[Pre-Migration Integrity Check]
+    B --> C[Isolated Database Copy]
+    C --> D[Transactional Schema Migration]
+    D --> E[Record and Monetary Verification]
+    E --> F[Financial Reconciliation]
+    F --> G[Automated Regression Tests]
+    G --> H{Verification Successful?}
+    H -->|Yes| I[Operational Database Migration]
+    H -->|No| J[Investigate and Remediate]
 ```
 
-The diagram represents the logical deployment architecture. The final isolated runtime test focused on read-only financial processing rather than writable identity and audit services.
+Before applying the migration to the operational database, I tested the process against an isolated copy.
 
-### Infrastructure configuration
+The migration was implemented within a database transaction, allowing schema changes and financial record conversion to be committed together.
 
-| File | Purpose |
-|---|---|
-| `Dockerfile` | Base application image |
-| `Dockerfile.offline` | Application updates using an existing local image |
-| `compose.yaml` | Declarative infrastructure configuration |
-| `.dockerignore` | Exclusion of unnecessary and sensitive build artifacts |
-| `.gitignore` | Exclusion of local databases, logs and development artifacts |
-
-## 3. Container Hardening
-
-Once the application was containerized, the next priority was reducing its execution privileges and limiting unnecessary access to the host environment.
-
-The final verification container used the following configuration:
-
-| Control | Configuration |
-|---|---|
-| Application user | Non-root (`appuser`) |
-| User ID | 10001 |
-| Network | `none` |
-| Root filesystem | Read-only |
-| Linux capabilities | All dropped |
-| Privilege escalation | No new privileges |
-| Temporary storage | `/tmp` mounted as tmpfs |
-| Financial database mount | Read-only |
-| Published host ports | None |
-
-The rationale was to establish the minimum execution permissions necessary for the tested application functionality.
-
-### Runtime verification
-
-I inspected the effective process privileges in an earlier verification container to establish whether the configured restrictions were actually being enforced.
-
-Relevant observations from `/proc/1/status`:
-
-```text
-Uid:        10001   10001   10001   10001
-Gid:        10001   10001   10001   10001
-CapPrm:     0000000000000000
-CapEff:     0000000000000000
-CapBnd:     0000000000000000
-NoNewPrivs: 1
-```
-
-Controlled write attempts were also performed against the application directory and mounted financial storage. Both were rejected with read-only filesystem errors (`Errno 30`).
-
-These checks confirmed that the tested privilege and filesystem restrictions were enforced at runtime.
-
-## 4. Persistent Storage and Permission Troubleshooting
-
-One of the more interesting infrastructure issues occurred during persistent storage testing.
-
-A dedicated Docker volume was created to establish whether financial records could survive container replacement. However, the application initially failed to create a SQLite database inside the volume.
-
-The error indicated that the database could not be opened.
-
-Inspecting the volume permissions revealed the underlying issue:
-
-| Attribute | Value |
-|---|---|
-| Volume directory owner | UID 0 (root) |
-| Volume directory group | GID 0 (root) |
-| Directory permissions | 0755 |
-| Application user | UID 10001 |
-
-The non-root application process did not have sufficient write permissions.
-
-Running the application as root would have resolved the immediate error but undermined the existing security configuration.
-
-Instead, I used a temporary maintenance container to change ownership of the dedicated test volume. The maintenance process was granted the capability required for the ownership change:
-
-```text
---user 0:0
---cap-drop ALL
---cap-add CHOWN
-```
-
-Ownership of the volume directory was changed to `10001:10001`.
-
-The application subsequently initialized the database successfully while retaining non-root execution.
-
-### Persistence verification
-
-A fictional financial record was inserted into the test database. The original container was terminated, and the record was retrieved from a separate container using the same volume.
-
-Retrieved record:
-
-```text
-(1, 125000)
-```
-
-The stored monetary value represents EUR 1,250.00 in integer cents.
-
-This confirmed that the committed record persisted independently of the original container instance.
-
-The exercise also demonstrated why storage permissions need to be considered alongside container security. Restricting execution privileges is only useful if the application can still perform its intended operations.
-
-## 5. Offline Image Builds
-
-As the application evolved, I needed to incorporate updated financial pipelines, architectural components and AI security modules into the existing container image.
-
-Rather than reinstalling dependencies for every application update, I created a separate offline Dockerfile that reused the locally available application image.
-
-```dockerfile
-FROM enterprise-api-security-testing-api:latest
-
-COPY main.py config.py ./
-COPY pipelines/ ./pipelines/
-COPY security/ ./security/
-COPY app/ ./app/
-COPY ai_security/ ./ai_security/
-```
-
-The final image was built using:
-
-```powershell
-docker build --network none --pull=false -f Dockerfile.offline -t enterprise-api-security-testing-api:offline-final .
-```
-
-Final build output (excerpt):
-
-```text
-[+] Building 0.7s (11/11) FINISHED
-
-CACHED [1/6] FROM docker.io/library/enterprise-api-security-testing-api:latest
-[2/6] COPY main.py config.py ./
-[3/6] COPY pipelines/ ./pipelines/
-[4/6] COPY security/ ./security/
-[5/6] COPY app/ ./app/
-[6/6] COPY ai_security/ ./ai_security/
-```
-
-All build operations completed successfully, with a build context of 45.25 kB.
-
-The Docker build context excluded local databases, virtual environments, logs, source datasets, backups and isolated verification workspaces.
-
-The offline build depends on an existing local base image. It is therefore suitable for controlled application updates but does not provide a complete offline installation from an empty environment.
-
-The build flags also do not independently guarantee that Docker itself cannot attempt registry communication. Physical network disconnection was used as an additional precaution during earlier offline build verification.
-
-## 6. Application Health and Dependency Verification
-
-A running container does not necessarily mean that the application is operational.
-
-To test this distinction, I evaluated the application's health endpoint with and without its required financial database.
-
-| Test condition | HTTP response |
-|---|---:|
-| Application running without database | 503 |
-| Application running with readable database | 200 |
-
-The health endpoint checks database accessibility using a read-only connection.
-
-This allows the application to distinguish successful server startup from basic database readiness.
-
-The check does not validate every database table, identity service or application operation.
-
-## 7. Final Container Verification
-
-Following the financial database migration and application updates, I started the final verification container using the isolated integration database.
-
-```powershell
-docker run -d `
-  --name enterprise-final-verification `
-  --pull=never `
-  --network none `
-  --read-only `
-  --cap-drop ALL `
-  --security-opt no-new-privileges:true `
-  --tmpfs /tmp `
-  --mount "type=bind,source=$($PWD.Path)\integration-work,target=/app-data,readonly" `
-  --env ENTERPRISE_DATA_DIR=/app-data `
-  enterprise-api-security-testing-api:offline-final
-```
-
-The intention was to determine whether the updated application and financial reconciliation functionality remained operational under restrictive infrastructure conditions.
-
-### Application startup
-
-```text
-INFO:     Started server process [1]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://0.0.0.0:8000
-```
-
-The health endpoint was accessed from within the container using its internal loopback interface.
-
-```text
-HTTP status: 200
-{"status":"healthy","service":"enterprise-api-security-testing"}
-```
-
-No host ports were published.
-
-### Security configuration
-
-The running container was inspected using `docker inspect`.
-
-Relevant output:
-
-```text
-User=appuser
-Network=none
-ReadOnly=true
-CapDrop=[ALL]
-SecurityOpt=[no-new-privileges:true]
-```
-
-Inspection also confirmed that the mounted database directory was not writable (`RW=false`).
-
-### Financial reconciliation
-
-The reconciliation module was executed directly inside the isolated container.
-
-```text
-('STR-2026-001', 'European Market Entry', Decimal('85000.00'), Decimal('162068.00'))
-('STR-2026-002', 'Portfolio Optimisation', Decimal('120000.00'), Decimal('152507.00'))
-
-PASS: Containerized financial reconciliation verified
-```
-
-These results matched the reconciliation previously performed outside the container.
-
-The application therefore retained the tested financial reporting functionality without requiring external networking, elevated privileges or writable financial storage.
-
-## 8. Verification and Engineering Evidence
+### Migration verification
 
 | Verification | Result |
-|---|---|
-| Offline image build | Passed |
-| Application module imports | Passed |
-| Non-root execution | Verified |
-| Linux capability restrictions | Verified |
-| Privilege escalation restrictions | Verified |
-| Network isolation configuration | Verified |
-| Root filesystem write protection | Passed |
-| Mounted storage write protection | Passed |
-| Persistent volume permission remediation | Passed |
-| Cross-container data persistence | Passed |
-| Missing database health response | HTTP 503 |
-| Final application health response | HTTP 200 |
-| Containerized financial reconciliation | Passed |
+|---|---:|
+| Financial transactions retained | 177 |
+| Departmental projects retained | 5 |
+| Monetary values evaluated | 192 |
+| Original schema version | 0 |
+| Migrated schema version | 2 |
+| Database integrity check | Passed |
+| Financial reconciliation | Passed |
+| Automated regression tests | 177 passed |
 
-Following the infrastructure changes, the complete application regression suite was executed against an isolated database workspace.
+The migration preserved the monetary values represented in the existing database without introducing additional rounding.
+
+Following successful isolated verification, the migration was applied to the operational local database.
+
+## 3. Repeatable Data Processing
+
+Financial ingestion needs to remain reliable when source files are processed more than once.
+
+To evaluate this behaviour, I executed the financial processing sequence against a separate integration database and subsequently replayed the same source files.
+
+The ingestion mechanism uses source file hashing, ingestion history and transaction-level integrity controls to identify previously processed information.
+
+| Metric | Initial Processing | After Replay |
+|---|---:|---:|
+| Financial transactions | 175 | 175 |
+| Departmental projects | 5 | 5 |
+| Completed financial imports | 2 | 2 |
+| Duplicate records introduced | 0 | 0 |
+
+The replay did not introduce additional transactions or departmental project records.
+
+### Failure handling
+
+Separate automated tests evaluated invalid financial records, unauthorized corrections and transactional rollback behaviour.
+
+The objective was to ensure that a failed ingestion operation could not leave partially committed financial changes or incorrectly mark an unsuccessful import as completed.
+
+The targeted ingestion and reconciliation test suite returned:
+
+```text
+7 passed
+```
+
+These tests form part of the complete platform regression suite.
+
+## 4. Database Backup and Recovery
+
+I created a dedicated recovery workspace to establish whether the integrated financial database could be backed up and restored without losing its schema, records or reporting functionality.
+
+Rather than relying exclusively on a filesystem copy, the backup process used SQLite's native backup functionality.
+
+The original integration database was retained throughout the exercise.
+
+```mermaid
+flowchart LR
+    A[(Integration Database)] -->|SQLite Backup API| B[(Backup Database)]
+    B -->|Restore| C[(Restored Database)]
+    C --> D[Integrity Check]
+    C --> E[Schema and Record Comparison]
+    C --> F[Financial Reconciliation]
+    B --> G[SHA-256 Comparison]
+    C --> G
+```
+
+### Recovery verification methodology
+
+The verification process included:
+
+1. Creating a consistent backup of the integration database.
+2. Restoring the backup into a separate database file.
+3. Running SQLite integrity checks.
+4. Comparing the original and restored logical database contents.
+5. Executing financial reconciliation against the restored database.
+6. Comparing SHA-256 hashes of the backup and restored files.
+
+The recovery exercise did not involve deleting or modifying the original database.
+
+## 5. Recovery Results
+
+### Database integrity
+
+SQLite database integrity was evaluated using:
+
+```sql
+PRAGMA integrity_check;
+```
+
+Both the backup and restored database returned:
+
+```text
+ok
+```
+
+A logical database comparison using SQLite's `iterdump()` functionality also confirmed equivalence between the original integration database and restored database.
+
+### File integrity
+
+The backup and restored database files produced identical SHA-256 hashes:
+
+```text
+CF577727F66D5D78FF2310BD813402E60C710895743BD05C7008A8CF5573CFAE
+```
+
+The matching hashes confirmed byte-level equivalence between the two files at the time of verification.
+
+The hash comparison complements the logical database comparison and integrity checks. It does not independently establish the authenticity of a database or protect it against subsequent modification.
+
+### Financial reconciliation after recovery
+
+Database restoration is only useful if the recovered information remains operationally meaningful.
+
+To verify this, I executed the financial reconciliation module against the restored database.
+
+| Project | Proposed Fee | Recorded Revenue |
+|---|---:|---:|
+| European Market Entry | EUR 85,000.00 | EUR 162,068.00 |
+| Portfolio Optimisation | EUR 120,000.00 | EUR 152,507.00 |
+| **Total** | **EUR 205,000.00** | **EUR 314,575.00** |
+
+The results matched those obtained from the original integration database.
+
+This established that the restored database retained both the underlying financial records and the information required by the tested reporting functionality.
+
+## 6. Supporting Reliability Controls
+
+Several other application and infrastructure controls contribute to operational reliability.
+
+| Control | Purpose |
+|---|---|
+| Transactional ingestion | Prevent partially committed financial batches |
+| Source file hashing | Identify previously processed source content |
+| Financial correction approvals | Restrict unauthorized transaction modifications |
+| Integer monetary storage | Preserve exact financial values |
+| Read-only reconciliation | Prevent reporting operations from modifying financial records |
+| Persistent Docker storage | Preserve committed data across container lifecycles |
+| Dependency-aware health endpoint | Identify unavailable financial storage |
+| Automated regression testing | Detect unintended changes in application behaviour |
+
+The infrastructure verification also demonstrated that the health endpoint returned HTTP 503 when the financial database was unavailable and HTTP 200 when readable storage was provided.
+
+Further details are available in the [infrastructure documentation](infrastructure.md).
+
+## 7. Final Verification
+
+Following the database migration, financial integrity improvements and containerization changes, the complete automated regression suite was executed against an isolated database workspace.
 
 ```text
 177 passed, 1 warning in 1.64s
 ```
 
-The warning concerns a dependency deprecation. No tests failed.
+No tests failed. The remaining warning relates to dependency deprecation.
 
-The 177 tests cover the entire application platform, rather than infrastructure alone.
+### Reliability verification summary
 
-### Selected Git checkpoints
+| Verification | Result |
+|---|---|
+| Transactional schema migration | Passed |
+| Financial record preservation | Passed |
+| Repeatable source ingestion | Passed |
+| Invalid ingestion failure handling | Passed |
+| Database backup | Passed |
+| Database restoration | Passed |
+| SQLite integrity verification | Passed |
+| Logical database equivalence | Passed |
+| Backup and restoration hash equivalence | Passed |
+| Post-recovery financial reconciliation | Passed |
+| Cross-container data persistence | Passed |
+| Full platform regression suite | Passed |
+
+### Relevant Git checkpoints
 
 | Commit | Description |
 |---|---|
-| `154fe54` | Add offline Docker build for secure enterprise API |
+| `f527527` | Enforce read-only SQLite access for financial reconciliation |
+| `5b4422d` | Enforce exact monetary precision and financial integrity controls |
+| `60967e0` | Complete transactional financial schema migration and integration |
 | `be4a69b` | Finalize hardened offline enterprise application container |
 
-Additional supporting material is organized in the [engineering evidence directory](../evidence/).
+Supporting verification material is organized in the [engineering evidence directory](../evidence/).
 
-## 9. Limitations and Lessons Learned
+## 8. Limitations and Lessons Learned
 
-The project demonstrates a hardened local application environment rather than production-grade hosting infrastructure.
+The recovery exercise verified the financial database rather than the entire enterprise infrastructure.
 
-Several limitations remain:
+The following areas remain outside the completed verification scope:
 
-- Authenticated API operations were not verified inside the final read-only container.
-- Network isolation was evaluated through configuration inspection rather than independent packet monitoring.
-- The offline build requires a previously available local base image.
-- Persistent storage testing covered a controlled database record rather than complete application recovery.
-- Production monitoring, vulnerability scanning, high availability and distributed orchestration were outside the project scope.
+- Automated backup scheduling and retention policies.
+- Off-site and geographically redundant backups.
+- Identity database and audit log recovery.
+- Point-in-time recovery.
+- Recovery time and recovery point objective measurement.
+- High-availability infrastructure and automatic failover.
+- Recovery from an actual infrastructure failure.
 
-The main lesson from this component was that infrastructure hardening involves balancing security restrictions with operational requirements.
+The transactional migration was successfully tested, although a deliberately induced migration failure was not evaluated separately.
 
-The persistent storage permission issue was a practical example of this. The appropriate solution was not to remove security restrictions, but to identify the specific permission required and address it without unnecessarily expanding the application's privileges.
+One of the main lessons from this project was that successful data recovery should be evaluated at multiple levels. A readable database file alone does not demonstrate that its records, schema and dependent business processes remain intact.
+
+Combining database integrity checks, content comparisons, cryptographic hashes and financial reconciliation provided a stronger basis for evaluating recovery success within the defined project scope.
 
 ---
 
-[Project Overview](../README.md) | [Architecture](architecture.md) | [Data Engineering](data-engineering.md) | [Cybersecurity](cybersecurity.md)
+[Project Overview](../README.md) | [Data Engineering](data-engineering.md) | [Infrastructure](infrastructure.md) | [Testing](testing.md)
