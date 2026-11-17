@@ -12,10 +12,13 @@ __pycache__/
 .coverage
 htmlcov/
 
-# Local databases
+# Local databases and SQLite sidecar files
 *.db
+*.db-*
 *.sqlite
+*.sqlite-*
 *.sqlite3
+*.sqlite3-*
 
 # Generated logs
 logs/
@@ -29,6 +32,10 @@ data/incoming/
 .env
 .env.*
 !.env.example
+*.pem
+*.key
+*.pfx
+*.p12
 
 # Editor and operating system files
 .vscode/
@@ -38,3 +45,13 @@ Thumbs.db
 
 # Docker persistent storage
 docker-data/
+
+# Local verification and recovery workspaces
+migration-work/
+integration-work/
+recovery-work/
+
+# Backups and temporary files
+*.bak
+*.backup
+*.tmp
