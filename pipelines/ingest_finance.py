@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 from pipelines.validate_finance import validate_transaction
+from pipelines.money import eur_to_cents, cents_to_eur
 from security.finance_integrity import (
     initialize_correction_approvals,
     calculate_correction_hash,
@@ -17,49 +18,23 @@ from config import (
 )
 
 def initialize_database():
-    """Create the central Finance table if it does not already exist."""
+    """Create the integer-based Finance storage table."""
+
+    from pipelines.finance_schema import create_finance_schema
 
     with sqlite3.connect(DATABASE_PATH) as connection:
-        connection.execute("""
-            CREATE TABLE IF NOT EXISTS consulting_transactions (
-                transaction_id INTEGER PRIMARY KEY,
-                transaction_date TEXT NOT NULL,
-                business_unit TEXT NOT NULL,
-                cost_center TEXT NOT NULL,
-                project_id TEXT,
-                client_id TEXT,
-                transaction_type TEXT NOT NULL,
-                category TEXT NOT NULL,
-                description TEXT NOT NULL,
-                counterparty_id TEXT,
-                amount_eur REAL NOT NULL,
-                classification TEXT NOT NULL,
-                source_system TEXT NOT NULL
-            )
-        """)
+        create_finance_schema(connection)
 
     print("Consulting finance database initialized successfully.")
 
 
 def initialize_projects_table():
-    """Create the table used for departmental project information."""
+    """Create the integer-based departmental project storage table."""
+
+    from pipelines.finance_schema import create_projects_schema
 
     with sqlite3.connect(DATABASE_PATH) as connection:
-        connection.execute("""
-            CREATE TABLE IF NOT EXISTS department_projects (
-                project_id TEXT PRIMARY KEY,
-                client_id TEXT NOT NULL,
-                project_name TEXT NOT NULL,
-                project_status TEXT NOT NULL,
-                proposed_fee_eur REAL NOT NULL,
-                budget_eur REAL NOT NULL,
-                wip_eur REAL NOT NULL,
-                win_probability REAL NOT NULL,
-                project_manager TEXT NOT NULL,
-                classification TEXT NOT NULL,
-                ai_access TEXT NOT NULL
-            )
-        """)
+        create_projects_schema(connection)
 
     print("Department projects table initialized successfully.")
 
@@ -67,36 +42,48 @@ def initialize_projects_table():
 def ingest_transactions(csv_path=None):
     """Validate and import financial transactions from a selected CSV file."""
 
-    # Use the original Finance export unless another file is provided.
+    from io import StringIO
+
     if csv_path is None:
-            csv_path = DEFAULT_FINANCE_CSV
+        csv_path = DEFAULT_FINANCE_CSV
 
-    csv_path = Path(csv_path)
+    # Read and fingerprint the same source content.
+    file_path = Path(csv_path).resolve()
+    relative_path = file_path.relative_to(PROJECT_ROOT).as_posix()
 
-    # Read the fictional ERP export into a list of transactions.
-    with csv_path.open(newline="", encoding="utf-8-sig") as file:
-        reader = csv.DictReader(file)
-        transactions = list(reader)
+    source_content = file_path.read_bytes()
+    file_hash = hashlib.sha256(source_content).hexdigest()
 
     inserted = 0
     updated = 0
     unchanged = 0
 
-    # Identify the source file before importing its transactions.
-    file_path = csv_path.resolve()
-    relative_path = file_path.relative_to(PROJECT_ROOT).as_posix()
-    file_hash = calculate_file_hash(file_path)
-
-    # Skip files whose exact contents were successfully processed before.
-    if is_file_processed(file_path):
-        print(f"Already processed, skipping: {file_path.name}")
-        return
-
-    # Process the import as one database transaction.
-    # If validation fails, the current batch is rolled back.
     with track_ingestion_failure(relative_path, file_hash), sqlite3.connect(DATABASE_PATH) as connection:
 
-        # Initialize the approval registry once per ingestion batch.
+        connection.execute("BEGIN IMMEDIATE")
+
+        # Check ingestion history within the locked transaction.
+        processed = connection.execute(
+            """
+            SELECT 1
+            FROM finance_ingestion_history
+            WHERE file_path = ?
+              AND file_hash = ?
+              AND status = 'completed'
+            """,
+            (relative_path, file_hash),
+        ).fetchone()
+
+        if processed is not None:
+            print(f"Already processed, skipping: {file_path.name}")
+            return
+
+        # Parse the exact content used to calculate the fingerprint.
+        with StringIO(
+            source_content.decode("utf-8-sig"), newline=""
+        ) as source:
+            transactions = list(csv.DictReader(source))
+
         initialize_correction_approvals(connection)
 
         for transaction in transactions:
@@ -128,7 +115,7 @@ def ingest_transactions(csv_path=None):
                         category,
                         description,
                         counterparty_id,
-                        amount_eur,
+                        amount_cents,
                         classification,
                         source_system
                     FROM consulting_transactions
@@ -141,8 +128,8 @@ def ingest_transactions(csv_path=None):
                 incoming_record["transaction_id"] = int(
                     incoming_record["transaction_id"]
                 )
-                incoming_record["amount_eur"] = float(
-                    incoming_record["amount_eur"]
+                incoming_record["amount_eur"] = cents_to_eur(
+                    eur_to_cents(incoming_record["amount_eur"])
                 )
 
                 current_fields = (
@@ -162,6 +149,9 @@ def ingest_transactions(csv_path=None):
                 )
 
                 current_values = dict(zip(current_fields, current_record))
+                current_values["amount_eur"] = cents_to_eur(
+                    current_values["amount_eur"]
+                )
 
                 if calculate_correction_hash(current_values) != calculate_correction_hash(incoming_record):
                     consume_correction_approval(connection, incoming_record)
@@ -181,7 +171,7 @@ def ingest_transactions(csv_path=None):
                     category,
                     description,
                     counterparty_id,
-                    amount_eur,
+                    amount_cents,
                     classification,
                     source_system
                 )
@@ -196,7 +186,7 @@ def ingest_transactions(csv_path=None):
                     category = excluded.category,
                     description = excluded.description,
                     counterparty_id = excluded.counterparty_id,
-                    amount_eur = excluded.amount_eur,
+                    amount_cents = excluded.amount_cents,
                     classification = excluded.classification,
                     source_system = excluded.source_system
                 WHERE
@@ -209,7 +199,7 @@ def ingest_transactions(csv_path=None):
                     OR consulting_transactions.category IS NOT excluded.category
                     OR consulting_transactions.description IS NOT excluded.description
                     OR consulting_transactions.counterparty_id IS NOT excluded.counterparty_id
-                    OR consulting_transactions.amount_eur IS NOT excluded.amount_eur
+                    OR consulting_transactions.amount_cents IS NOT excluded.amount_cents
                     OR consulting_transactions.classification IS NOT excluded.classification
                     OR consulting_transactions.source_system IS NOT excluded.source_system
                 """,
@@ -224,7 +214,7 @@ def ingest_transactions(csv_path=None):
                     transaction["category"],
                     transaction["description"],
                     transaction["counterparty_id"],
-                    float(transaction["amount_eur"]),
+                    eur_to_cents(transaction["amount_eur"]),
                     transaction["classification"],
                     transaction["source_system"],
                 ),
@@ -286,6 +276,7 @@ def record_ingestion_failure(relative_path, file_hash, error_message):
                 status = 'failed',
                 error_message = excluded.error_message,
                 processed_at = CURRENT_TIMESTAMP
+            WHERE finance_ingestion_history.status != 'completed'
             """,
             (relative_path, file_hash, str(error_message)),
         )

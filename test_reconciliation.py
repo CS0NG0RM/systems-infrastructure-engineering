@@ -12,7 +12,7 @@ def test_reconciliation_identifies_financial_discrepancies(tmp_path):
             CREATE TABLE department_projects (
                 project_id TEXT PRIMARY KEY,
                 project_name TEXT NOT NULL,
-                proposed_fee_eur REAL NOT NULL,
+                proposed_fee_cents INTEGER NOT NULL,
                 project_status TEXT NOT NULL
             )
         """)
@@ -22,7 +22,7 @@ def test_reconciliation_identifies_financial_discrepancies(tmp_path):
                 transaction_id INTEGER PRIMARY KEY,
                 project_id TEXT,
                 transaction_type TEXT NOT NULL,
-                amount_eur REAL NOT NULL
+                amount_cents INTEGER NOT NULL
             )
         """)
 
@@ -30,27 +30,27 @@ def test_reconciliation_identifies_financial_discrepancies(tmp_path):
         connection.executemany(
             """
             INSERT INTO department_projects
-                (project_id, project_name, proposed_fee_eur, project_status)
+                (project_id, project_name, proposed_fee_cents, project_status)
             VALUES (?, ?, ?, ?)
             """,
             [
-                ("STR-TEST-001", "Strategy Project A", 85000, "Active"),
-                ("STR-TEST-002", "Strategy Project B", 120000, "Active"),
+                ("STR-TEST-001", "Strategy Project A", 8500000, "Active"),
+                ("STR-TEST-002", "Strategy Project B", 12000000, "Active"),
             ],
         )
 
         connection.executemany(
             """
             INSERT INTO consulting_transactions
-                (transaction_id, project_id, transaction_type, amount_eur)
+                (transaction_id, project_id, transaction_type, amount_cents)
             VALUES (?, ?, ?, ?)
             """,
             [
-                (1, "STR-TEST-001", "Revenue", 100000),
-                (2, "STR-TEST-001", "Revenue", 62500),
-                (3, "STR-TEST-002", "Revenue", 152507),
-                (4, "STR-TEST-002", "Expense", 5000),
-                (5, "STR-TEST-001", "Revenue", -2000),
+                (1, "STR-TEST-001", "Revenue", 10000000),
+                (2, "STR-TEST-001", "Revenue", 6250000),
+                (3, "STR-TEST-002", "Revenue", 15250700),
+                (4, "STR-TEST-002", "Expense", 500000),
+                (5, "STR-TEST-001", "Revenue", -200000),
             ],
         )
 

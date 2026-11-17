@@ -91,14 +91,14 @@ def test_transaction_corrections(tmp_path, monkeypatch, capsys):
     with sqlite3.connect(database_path) as connection:
         records = connection.execute(
             """
-            SELECT transaction_id, amount_eur
+            SELECT transaction_id, amount_cents
             FROM consulting_transactions
             WHERE transaction_id = 990001
             """
         ).fetchall()
 
     # The correction replaces the amount without duplicating the transaction.
-    assert records == [(990001, 11500.0)]
+    assert records == [(990001, 1150000)]
 
 def test_invalid_batch_rolls_back(tmp_path, monkeypatch):
     """Reject the entire batch if one transaction is invalid."""
@@ -267,7 +267,7 @@ def test_security_financial_data_poisoning(
     with sqlite3.connect(database_path) as connection:
         original_amount = connection.execute(
             """
-            SELECT amount_eur
+            SELECT amount_cents
             FROM consulting_transactions
             WHERE transaction_id = ?
             """,
@@ -283,7 +283,7 @@ def test_security_financial_data_poisoning(
     with sqlite3.connect(database_path) as connection:
         rejected_amount = connection.execute(
             """
-            SELECT amount_eur
+            SELECT amount_cents
             FROM consulting_transactions
             WHERE transaction_id = ?
             """,
@@ -299,11 +299,11 @@ def test_security_financial_data_poisoning(
             ("manipulated.csv",),
         ).fetchone()
 
-    print(f"SEC-BIZ-001 original amount: EUR {original_amount}")
-    print(f"SEC-BIZ-001 amount after rejected manipulation: EUR {rejected_amount}")
+    print(f"SEC-BIZ-001 original amount in cents: {original_amount}")
+    print(f"SEC-BIZ-001 amount after rejected manipulation in cents: {rejected_amount}")
 
-    assert original_amount == 12500.0
-    assert rejected_amount == 12500.0
+    assert original_amount == 1250000
+    assert rejected_amount == 1250000
     assert failed_import == ("failed",)
 
 def test_approved_financial_correction(
@@ -390,7 +390,7 @@ def test_approved_financial_correction(
     with sqlite3.connect(database_path) as connection:
         amount = connection.execute(
             """
-            SELECT amount_eur
+            SELECT amount_cents
             FROM consulting_transactions
             WHERE transaction_id = ?
             """,
@@ -407,7 +407,7 @@ def test_approved_financial_correction(
         ).fetchone()
 
     assert "Transactions updated: 1" in captured
-    assert amount == 11500.0
+    assert amount == 1150000
     assert approval is not None
     assert approval[0] is not None
 
@@ -421,10 +421,10 @@ def test_approved_financial_correction(
         connection.execute(
             """
             UPDATE consulting_transactions
-            SET amount_eur = ?
+            SET amount_cents = ?
             WHERE transaction_id = ?
             """,
-            (12500.0, 990010),
+            (1250000, 990010),
         )
 
     # Create a new import file containing the previously approved correction.
@@ -442,7 +442,7 @@ def test_approved_financial_correction(
     with sqlite3.connect(database_path) as connection:
         replay_amount = connection.execute(
             """
-            SELECT amount_eur
+            SELECT amount_cents
             FROM consulting_transactions
             WHERE transaction_id = ?
             """,
@@ -458,7 +458,7 @@ def test_approved_financial_correction(
             ("approved_correction_replay.csv",),
         ).fetchone()
 
-    assert replay_amount == 12500.0
+    assert replay_amount == 1250000
     assert replay_status == ("failed",)
 
     print("PASS: Previously consumed approval rejected on replay")
@@ -543,7 +543,7 @@ def test_failed_correction_rolls_back_approval_consumption(
     with sqlite3.connect(database_path) as connection:
         amount = connection.execute(
             """
-            SELECT amount_eur
+            SELECT amount_cents
             FROM consulting_transactions
             WHERE transaction_id = 990020
             """
@@ -566,6 +566,6 @@ def test_failed_correction_rolls_back_approval_consumption(
             ("approved_correction.csv",),
         ).fetchone()
 
-    assert amount == 12500.0
+    assert amount == 1250000
     assert consumed_at is None
     assert failure_status == ("failed",)

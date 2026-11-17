@@ -107,8 +107,8 @@ def get_finance_projects(
         {
             "project_id": project_id,
             "project_name": name,
-            "proposed_fee_eur": proposed_fee,
-            "invoiced_revenue_eur": revenue,
+            "proposed_fee_eur": format(proposed_fee, ".2f"),
+            "invoiced_revenue_eur": format(revenue, ".2f"),
         }
         for project_id, name, proposed_fee, revenue in results
     ]

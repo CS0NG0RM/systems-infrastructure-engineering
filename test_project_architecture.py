@@ -22,9 +22,9 @@ def create_test_database(database_path):
                 client_id TEXT NOT NULL,
                 project_name TEXT NOT NULL,
                 project_status TEXT NOT NULL,
-                proposed_fee_eur REAL NOT NULL,
-                budget_eur REAL NOT NULL,
-                wip_eur REAL NOT NULL,
+                proposed_fee_cents INTEGER NOT NULL,
+                budget_cents INTEGER NOT NULL,
+                wip_cents INTEGER NOT NULL,
                 win_probability REAL NOT NULL,
                 project_manager TEXT NOT NULL,
                 classification TEXT NOT NULL,
@@ -41,17 +41,17 @@ def create_test_database(database_path):
             [
                 (
                     "STR-TEST-001", "CL-001", "Strategy Project A",
-                    "Active", 85000, 48000, 12500, 1.0,
+                    "Active", 8500000, 4800000, 1250000, 1.0,
                     "PM-001", "confidential", "denied",
                 ),
                 (
                     "STR-TEST-002", "CL-002", "Strategy Project B",
-                    "Pipeline", 120000, 72000, 18500, 0.65,
+                    "Pipeline", 12000000, 7200000, 1850000, 0.65,
                     "PM-002", "internal", "approved",
                 ),
                 (
                     "FIN-TEST-001", "CL-003", "Finance Project",
-                    "Active", 50000, 30000, 8000, 1.0,
+                    "Active", 5000000, 3000000, 800000, 1.0,
                     "PM-003", "public", "approved",
                 ),
             ],

@@ -4,6 +4,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from config import DATABASE_PATH
+from pipelines.money import cents_to_eur
 from app.projects.domain.project import (
     AIApproval,
     Project,
@@ -38,9 +39,9 @@ class ProjectRepository:
             client_id=record["client_id"],
             project_name=record["project_name"],
             project_status=record["project_status"],
-            proposed_fee_eur=Decimal(str(record["proposed_fee_eur"])),
-            budget_eur=Decimal(str(record["budget_eur"])),
-            wip_eur=Decimal(str(record["wip_eur"])),
+            proposed_fee_eur=cents_to_eur(record["proposed_fee_cents"]),
+            budget_eur=cents_to_eur(record["budget_cents"]),
+            wip_eur=cents_to_eur(record["wip_cents"]),
             win_probability=Decimal(str(record["win_probability"])),
             project_manager=record["project_manager"],
             classification=ProjectClassification(record["classification"]),
@@ -106,9 +107,9 @@ class ProjectRepository:
                 client_id,
                 project_name,
                 project_status,
-                proposed_fee_eur,
-                budget_eur,
-                wip_eur,
+                proposed_fee_cents,
+                budget_cents,
+                wip_cents,
                 win_probability,
                 project_manager,
                 classification,
