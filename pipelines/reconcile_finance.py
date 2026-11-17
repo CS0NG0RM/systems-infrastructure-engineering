@@ -1,6 +1,8 @@
 import sqlite3
+from pathlib import Path
 
 from config import DATABASE_PATH
+
 
 def reconcile_projects(database_path=None):
     """Compare active project fees with revenue recorded in Finance."""
@@ -36,8 +38,10 @@ def reconcile_projects(database_path=None):
     if database_path is None:
         database_path = DATABASE_PATH
 
-    # Run the same reconciliation query against the selected database.
-    with sqlite3.connect(database_path) as connection:
+    # Open the existing financial database in read-only mode.
+    database_uri = Path(database_path).resolve().as_uri() + "?mode=ro"
+
+    with sqlite3.connect(database_uri, uri=True) as connection:
         results = connection.execute(query).fetchall()
 
     return results
