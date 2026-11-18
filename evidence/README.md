@@ -23,11 +23,25 @@ Verified differentiated resource access based on assigned security permissions. 
 Verified classification-based access restrictions against a confidential financial document. Access using an Employee identity was rejected with HTTP 403, while access using an authorized Finance identity returned HTTP 200.
 <img width="673" height="468" alt="image" src="https://github.com/user-attachments/assets/c5a21d54-bc32-4ca7-863a-3fff067ca6e6" />
 
+## Automated Access Control Matrix Verification
+
+Verified role-based document access permissions across Finance, Strategy, Employee and AI service identities through parameterized security tests. Additional tests validated AI data access restrictions, operational endpoint authorization and database unavailability handling. All 100 tests passed at this implementation checkpoint.
+<img width="1030" height="718" alt="final_validation2" src="https://github.com/user-attachments/assets/e0373732-963a-4081-8bc0-f102c8b7ae71" />
+
 ## Financial Data Poisoning (SEC-BIZ-001)
 
 Successfully reproduced a business-logic vulnerability in the financial ingestion pipeline. A manipulated source record overwrote an existing transaction, reducing its value from EUR 12,500 to EUR 1 without authorization
 <img width="1033" height="712" alt="image(20261116-112257)" src="https://github.com/user-attachments/assets/3f7206a0-9ce9-4b25-8d23-c811ec4ab04c" />
 
+## Financial Data Poisoning Remediation (SEC-BIZ-001)
+
+Verified financial integrity controls through five automated ingestion tests covering transaction corrections, invalid batch rollback, failed import recording, financial data poisoning and approved financial corrections. All five tests passed following implementation of the remediation controls.
+<img width="1032" height="714" alt="security contr" src="https://github.com/user-attachments/assets/f7fd7e0f-f084-4d42-ada6-4216aea8e4f4" />
+
+## Centralized Application Configuration Verification
+
+Verified the adoption of centralized configuration imports across application, financial ingestion, reconciliation, identity management and audit logging modules. Conducted targeted source code inspection to identify residual hardcoded storage path patterns.
+<img width="1031" height="720" alt="final_validation" src="https://github.com/user-attachments/assets/c407d194-f049-42af-a787-be055f25a817" />
 
 ## Docker Container Application Startup
 
