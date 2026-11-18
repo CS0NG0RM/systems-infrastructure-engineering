@@ -8,6 +8,21 @@ Programmatic enumeration of registered FastAPI endpoints to identify the applica
 Verified authentication controls across five protected API endpoints. All requests with missing or invalid credentials returned HTTP 401
 <img width="935" height="847" alt="image(20261116-104204)" src="https://github.com/user-attachments/assets/18fa0ea7-ecd0-4bf4-8442-e4ca7b0be586" />
 
+## Role-Based Access Control Verification
+
+Verified authorization boundaries using Employee and Strategy identities. Unauthorized requests to restricted operational and financial resources returned HTTP 403 (Access denied).
+<img width="1027" height="708" alt="image" src="https://github.com/user-attachments/assets/e17a7858-311a-4e6b-b36d-b552997efee9" />
+
+## Authorized Resource Access Verification
+
+Verified differentiated resource access based on assigned security permissions. Unauthorized access to financial resources returned HTTP 403, while authorized access to a public-classified document returned HTTP 200.
+<img width="676" height="468" alt="image" src="https://github.com/user-attachments/assets/4fcdf036-df90-4f78-bb27-bccafe9972a4" />
+
+## Document Classification and Access Control Enforcement
+
+Verified classification-based access restrictions against a confidential financial document. Access using an Employee identity was rejected with HTTP 403, while access using an authorized Finance identity returned HTTP 200.
+<img width="673" height="468" alt="image" src="https://github.com/user-attachments/assets/c5a21d54-bc32-4ca7-863a-3fff067ca6e6" />
+
 ## Financial Data Poisoning (SEC-BIZ-001)
 
 Successfully reproduced a business-logic vulnerability in the financial ingestion pipeline. A manipulated source record overwrote an existing transaction, reducing its value from EUR 12,500 to EUR 1 without authorization
@@ -83,6 +98,15 @@ Verified integrated execution of database initialization, financial transaction 
 
 Successfully verified database backup and restoration procedures within an isolated recovery environment. Confirmed schema and record consistency, preservation of financial reconciliation results and identical SHA-256 hashes between the backup and restored database files.
 <img width="1231" height="708" alt="24_enterprise_backup_recovery_verification" src="https://github.com/user-attachments/assets/0fe7b355-faf5-4be4-8ae6-60f0be6e80b2" />
+
+## Simulated Indirect Prompt Injection Verification (SEC-AI-002)
+
+Evaluated backend authorization enforcement against a simulated malicious AI-agent instruction claiming Finance privileges. The resulting resource request was executed using an Employee identity and rejected with HTTP 403, confirming enforcement of the tested authorization boundary.
+
+## Simulated Indirect Prompt Injection Verification (SEC-AI-002)
+
+Evaluated backend authorization enforcement against a simulated malicious AI-agent instruction claiming Finance privileges. The resulting resource request was executed using an Employee identity and rejected with HTTP 403, confirming enforcement of the tested authorization boundary.
+<img width="677" height="468" alt="image" src="https://github.com/user-attachments/assets/1bc06fcd-701b-4155-a1f5-8094b340553a" />
 
 ## Automated AI-Agent Security Tests
 
