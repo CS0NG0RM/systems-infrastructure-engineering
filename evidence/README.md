@@ -116,10 +116,6 @@ Successfully verified database backup and restoration procedures within an isola
 ## Simulated Indirect Prompt Injection Verification (SEC-AI-002)
 
 Evaluated backend authorization enforcement against a simulated malicious AI-agent instruction claiming Finance privileges. The resulting resource request was executed using an Employee identity and rejected with HTTP 403, confirming enforcement of the tested authorization boundary.
-
-## Simulated Indirect Prompt Injection Verification (SEC-AI-002)
-
-Evaluated backend authorization enforcement against a simulated malicious AI-agent instruction claiming Finance privileges. The resulting resource request was executed using an Employee identity and rejected with HTTP 403, confirming enforcement of the tested authorization boundary.
 <img width="677" height="468" alt="image" src="https://github.com/user-attachments/assets/1bc06fcd-701b-4155-a1f5-8094b340553a" />
 
 ## Automated AI-Agent Security Tests
