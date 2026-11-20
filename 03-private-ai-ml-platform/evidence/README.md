@@ -21,10 +21,7 @@ The three final regression suites were run independently. Older test screenshots
 
 The locally operated interface answers an authorized IT policy question and identifies the supporting fictional document.
 
-**Original attached image:** `document_grounded_ai_web_interface(2).png`  
-**Save in this folder as:** `rag-web-interface.png`
-
-![Document-grounded RAG web application showing a cited IT policy answer](rag-web-interface.png)
+<img width="1920" height="1038" alt="document_grounded_ai_web_interface" src="https://github.com/user-attachments/assets/94e570ec-10dd-4abf-8df8-8d3ee0fcd9af" />
 
 *Figure 1. Authorized RAG response with source attribution to fictional IT document IT-001.*
 
@@ -48,10 +45,7 @@ The locally persisted vector-retrieval process uses document-scoped constraints,
 
 Five cases validated authorized IT, Finance, and HR retrieval, as well as forbidden-document and mixed-permission scenarios. The screenshot shows returned document identifiers, passage counts, and hybrid scores.
 
-**Original attached image:** `P03-RAG-Document-ID-Real-Vector-Retrieval-Validation(1).png`  
-**Save in this folder as:** `document-id-validation.png`
-
-![Five real document-ID retrieval validation scenarios passed](document-id-validation.png)
+<img width="1920" height="1040" alt="P03-RAG-Document-ID-Real-Vector-Retrieval-Validation" src="https://github.com/user-attachments/assets/df96c1a3-36b3-4b10-88dc-c3afadc2a7b9" />
 
 *Figure 4. Five of five document-ID retrieval scenarios passed using the local index.*
 
@@ -59,8 +53,7 @@ Five cases validated authorized IT, Finance, and HR retrieval, as well as forbid
 
 The observed unchanged-document indexing run reused all six existing embeddings, generated no new embeddings, and completed the document transaction.
 
-**Original attached image:** `P03-RAG-Atomic-Incremental-Indexing-Pipeline(1).png`  
-**Save in this folder as:** `atomic-indexing.png`
+<img width="872" height="975" alt="P03-RAG-Atomic-Incremental-Indexing-Pipeline" src="https://github.com/user-attachments/assets/e9df193c-370b-47d2-9058-8f293b63c843" />
 
 ![Atomic document indexing with embedding reuse](atomic-indexing.png)
 
@@ -84,10 +77,7 @@ These are results from the pictured run, not a general speed or scalability benc
 
 A fixed IT Analyst demonstration identity was restricted to the fictional IT document. A Finance-related question did not produce an answer from unauthorized Finance content. The fixed demonstration identity is **not a production authentication mechanism**.
 
-**Original attached image:** `P03-RAG-Refactored-Live-Unauthorized-Retrieval(1).png`  
-**Save in this folder as:** `unauthorized-retrieval.png`
-
-![Unauthorized Finance document retrieval refused in local RAG application](unauthorized-retrieval.png)
+<img width="1919" height="1038" alt="P03-RAG-Refactored-Live-Unauthorized-Retrieval" src="https://github.com/user-attachments/assets/97728b94-df32-4109-982e-502d2e1320c8" />
 
 *Figure 6. Observed access-boundary behavior for one unauthorized Finance query.*
 
@@ -95,10 +85,7 @@ A fixed IT Analyst demonstration identity was restricted to the fictional IT doc
 
 The pictured regression checkpoint covers hybrid ranking, authorization-related cases, input validation, and retrieval behavior.
 
-**Original attached image:** `P03-RAG-Hybrid-Retrieval-Regression-52-Passed(1).png`  
-**Save in this folder as:** `hybrid-regression-tests.png`
-
-![52 passing hybrid retrieval regression tests](hybrid-regression-tests.png)
+<img width="1434" height="410" alt="P03-RAG-Hybrid-Retrieval-Regression-52-Passed" src="https://github.com/user-attachments/assets/e157fceb-9365-4a18-9291-514d31a9f201" />
 
 *Figure 7. Intermediate RAG regression run: 52 tests passed.*
 
@@ -106,10 +93,7 @@ The pictured regression checkpoint covers hybrid ranking, authorization-related 
 
 The API integration suite exercised successful and unsuccessful request paths, including malformed requests, unavailable retrieval and internal error handling. Expected HTTP error statuses in these tests do not mean the suite failed.
 
-**Original attached image:** `P03-RAG-HTTP-API-Integration-31-Passed(1).png`  
-**Save in this folder as:** `api-integration-tests.png`
-
-![31 passing local RAG API integration tests](api-integration-tests.png)
+<img width="1920" height="1015" alt="P03-RAG-HTTP-API-Integration-31-Passed" src="https://github.com/user-attachments/assets/ded47e15-912f-43e8-b7dc-b36ec775a288" />
 
 *Figure 8. Intermediate HTTP API integration run: 31 tests passed.*
 
@@ -117,10 +101,7 @@ The API integration suite exercised successful and unsuccessful request paths, i
 
 A local Qwen3 model was invoked through Ollama, returning generated content and performance counters without an external inference API.
 
-**Original attached image:** `local_ai_python_api_inference(1).png`  
-**Save in this folder as:** `local-llm-inference.png`
-
-![Local Qwen3 language-model inference and performance counters](local-llm-inference.png)
+<img width="1919" height="1040" alt="local_ai_python_api_inference" src="https://github.com/user-attachments/assets/807405a5-4b8c-4e04-8ef7-b8fbc4d3b742" />
 
 *Figure 9. Example inference run with reported elapsed time and token-generation rate.*
 
@@ -132,10 +113,7 @@ The pictured run reports approximately 2.31 seconds elapsed and 89.89 tokens per
 
 Isolation Forest, Random Forest, and an MLP neural network were compared using the same independent synthetic dataset containing 6,000 fictional transactions and 300 known synthetic anomalies.
 
-**Original attached image:** `ml-three-model-independent-benchmark.PNG`  
-**Save in this folder as:** `ml-three-model-benchmark.png`
-
-![Independent synthetic benchmark of three anomaly-detection models](ml-three-model-benchmark.png)
+<img width="1570" height="969" alt="ml-three-model-independent-benchmark" src="https://github.com/user-attachments/assets/ef6d6bef-f111-4a85-9fa5-d35e282ce040" />
 
 *Figure 10. Controlled model comparison reporting precision, recall and F1 score.*
 
@@ -151,10 +129,7 @@ The neural network achieved the highest F1 score **in this benchmark**. These re
 
 The pictured MLP training run used 4,500 synthetic training records and 1,500 validation records. Its validation results are from a different run than the independent benchmark above.
 
-**Original attached image:** `neural network.PNG`  
-**Save in this folder as:** `neural-network-validation.png`
-
-![MLP neural-network training and validation results](neural-network-validation.png)
+<img width="1565" height="551" alt="neural network" src="https://github.com/user-attachments/assets/7877ec13-8191-46af-b6b9-2c4a81af6283" />
 
 *Figure 11. Synthetic-data neural-network validation and confusion-matrix results.*
 
@@ -191,10 +166,7 @@ The values are **model anomaly scores**, not calibrated probabilities of actual 
 
 The agent platform's regression tests cover structured requests, role-based authorization, bounded workflow planning and execution, tool adapters, failure handling and persistence.
 
-**Original attached image:** `72 tests.PNG`  
-**Save in this folder as:** `agent-regression-tests.png`
-
-![Intermediate agent platform regression suite with 72 tests passed](agent-regression-tests.png)
+<img width="1564" height="1015" alt="72 tests" src="https://github.com/user-attachments/assets/ab06d5ae-f357-41e7-9d6d-98ef67b42dab" />
 
 *Figure 12. Intermediate agent-platform checkpoint: 72 tests passed. The completed agent suite later reached 134 passing tests.*
 
