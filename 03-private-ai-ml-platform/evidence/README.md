@@ -32,8 +32,7 @@ The locally operated interface answers an authorized IT policy question and iden
 
 A differently phrased backup-restoration question produced an answer supported by a specific retrieved IT document chunk.
 
-![Paraphrased IT backup restoration question with source citation](<img width="1534" height="835" alt="Paraphrased backup question" src="https://github.com/user-attachments/assets/c80df146-8b75-4ad2-be51-0d5be7eded72" />)
-
+<img width="1534" height="835" alt="Paraphrased backup question" src="https://github.com/user-attachments/assets/03a11431-3d17-443c-b91a-1d2526a4b131" />
 
 *Figure 2. Paraphrased request answered with a citation to IT-001-C0001.*
 
