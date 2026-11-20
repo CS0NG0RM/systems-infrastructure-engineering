@@ -40,10 +40,7 @@ A differently phrased backup-restoration question produced an answer supported b
 
 The locally persisted vector-retrieval process uses document-scoped constraints, supporting the separation of authorized and unauthorized document records.
 
-**Original attached image:** `P03-RAG-SQL-Scoped-Real-Vector-Retrieval(1).png`  
-**Save in this folder as:** `sql-scoped-retrieval.png`
-
-![SQL-scoped real vector retrieval demonstration](sql-scoped-retrieval.png)
+<img width="1567" height="690" alt="P03-RAG-SQL-Scoped-Real-Vector-Retrieval" src="https://github.com/user-attachments/assets/101e4690-42ba-4fc2-9d64-1f1eff8a4edd" />
 
 *Figure 3. Development evidence of document-scoped retrieval from the local vector index.*
 
