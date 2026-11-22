@@ -1,0 +1,89 @@
+# Credentials and sensitive configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.kdbx
+secrets/
+credentials/
+id_rsa*
+id_ed25519*
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+*.tfvars.json
+*.tfplan
+crash.log
+override.tf
+override.tf.json
+
+# Ansible
+*.retry
+.vault_pass
+vault-password*
+
+# Kubernetes
+kubeconfig
+kubeconfig.*
+.kube/
+
+# Virtual infrastructure
+*.vdi
+*.vmdk
+*.vhd
+*.vhdx
+*.ova
+*.ovf
+*.iso
+*.vmem
+*.vmsn
+*.nvram
+
+# Databases and backups
+*.db
+*.sqlite
+*.sqlite3
+backups/
+
+# Network captures and operational logs
+*.pcap
+*.pcapng
+*.log
+logs/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Temporary and local files
+*.tmp
+*.bak
+temp/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Local SSH authentication material
+lab_automation_ed25519
+lab_automation_ed25519.pub
+
+# Offline installation and container artifacts
+offline-packages/
+*.whl
+*.rpm
+*.tar
+*.tar.gz
+*.oci
+image-rootfs/
+
+# Generated operational evidence
+reports/

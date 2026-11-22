@@ -1,0 +1,231 @@
+---
+- name: Deploy secured enterprise application
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    container_name: enterprise-health
+    application_version: "1.0.1"
+    application_image: "localhost/enterprise-health:{{ application_version }}"
+    deployment_profile: private
+
+    network_profiles:
+      isolated:
+        network_mode: none
+        network_name: none
+        arguments:
+          - --network=none
+
+      private:
+        network_mode: bridge
+        network_name: enterprise-private
+        arguments:
+          - --network=enterprise-private
+          - --dns=none
+          - --publish=10.20.20.10:8080:8080/tcp
+          - --env=SERVICE_HOST=0.0.0.0
+          - --env=SERVICE_PORT=8080
+
+    # Apply identical security restrictions to both deployment profiles.
+    security_arguments:
+      - --pull=never
+      - --read-only
+      - --cap-drop=ALL
+      - --security-opt=no-new-privileges
+      - --memory=128m
+      - --pids-limit=32
+      - --user=10001:10001
+
+  tasks:
+    - name: Validate deployment target and profile
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+          - deployment_profile in network_profiles
+
+    # Require the application image to exist in local storage.
+    - name: Verify application image availability
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ application_image }}"
+      changed_when: false
+
+    # Establish the private network only when the selected profile requires it.
+    - name: Prepare private application network
+      when: deployment_profile == 'private'
+      block:
+        - name: Check private network availability
+          ansible.builtin.command:
+            argv:
+              - podman
+              - network
+              - exists
+              - enterprise-private
+          register: private_network_check
+          changed_when: false
+          failed_when: private_network_check.rc not in [0, 1]
+
+        - name: Create restricted private network
+          ansible.builtin.command:
+            argv:
+              - podman
+              - network
+              - create
+              - --driver=bridge
+              - --internal
+              - --disable-dns
+              - --subnet=10.89.50.0/24
+              - enterprise-private
+          when: private_network_check.rc == 1
+
+        - name: Inspect private network
+          ansible.builtin.command:
+            argv:
+              - podman
+              - network
+              - inspect
+              - enterprise-private
+          register: private_network_inspection
+          changed_when: false
+
+        - name: Parse private network configuration
+          ansible.builtin.set_fact:
+            private_network: >-
+              {{ (private_network_inspection.stdout | from_json)[0] }}
+
+        - name: Validate private network security
+          ansible.builtin.assert:
+            that:
+              - private_network.driver == 'bridge'
+              - private_network.internal
+              - not private_network.dns_enabled
+              - not private_network.ipv6_enabled
+              - private_network.subnets | length == 1
+              - private_network.subnets[0].subnet == '10.89.50.0/24'
+
+    - name: Check existing application container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ container_name }}"
+      register: container_check
+      changed_when: false
+      failed_when: container_check.rc not in [0, 1]
+
+    # Construct the deployment command from the selected network profile.
+    - name: Deploy restricted application container
+      ansible.builtin.command:
+        argv: >-
+          {{
+            ['podman', 'run', '--detach', '--name', container_name]
+            + security_arguments
+            + network_profiles[deployment_profile].arguments
+            + [application_image]
+          }}
+      when: container_check.rc == 1
+
+    - name: Inspect application container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - "{{ container_name }}"
+      register: container_inspection
+      changed_when: false
+
+    - name: Parse application configuration
+      ansible.builtin.set_fact:
+        container_details: >-
+          {{ (container_inspection.stdout | from_json)[0] }}
+
+    # Reject configuration drift instead of silently replacing containers.
+    - name: Validate deployed container configuration
+      ansible.builtin.assert:
+        that:
+          - container_details.Config.Image == application_image
+          - container_details.Config.User == '10001:10001'
+          - container_details.HostConfig.ReadonlyRootfs
+          - container_details.HostConfig.NetworkMode == network_profiles[deployment_profile].network_mode
+          - network_profiles[deployment_profile].network_name in container_details.NetworkSettings.Networks
+          - container_details.NetworkSettings.Networks | length == 1
+          - container_details.HostConfig.Memory == 134217728
+          - container_details.HostConfig.PidsLimit == 32
+        fail_msg: Existing deployment does not match the requested configuration.
+
+    - name: Start existing application container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - start
+          - "{{ container_name }}"
+      when: not container_details.State.Running
+
+    # Verify application health without using external network services.
+    - name: Validate application health endpoint
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ container_name }}"
+          - /usr/bin/python3
+          - -c
+          - |
+            import json
+            import urllib.request
+
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({})
+            )
+
+            with opener.open(
+                "http://127.0.0.1:8080/health",
+                timeout=5
+            ) as response:
+                payload = json.load(response)
+
+            assert payload["status"] == "healthy"
+            assert payload["version"] == "{{ application_version }}"
+
+            print(json.dumps(payload))
+      register: health_result
+      changed_when: false
+      retries: 3
+      delay: 2
+      until: health_result.rc == 0
+
+    - name: Inspect application port publication
+      ansible.builtin.command:
+        argv:
+          - podman
+          - port
+          - "{{ container_name }}"
+      register: published_ports
+      changed_when: false
+
+    - name: Validate application port restrictions
+      ansible.builtin.assert:
+        that:
+          - >-
+            (deployment_profile == 'isolated'
+            and published_ports.stdout | trim == '')
+            or
+            (deployment_profile == 'private'
+            and published_ports.stdout | trim
+            == '8080/tcp -> 10.20.20.10:8080')
+
+    - name: Report application deployment
+      ansible.builtin.debug:
+        msg:
+          - "APPLICATION DEPLOYMENT VALIDATION PASSED"
+          - "Profile: {{ deployment_profile }}"
+          - "Container: {{ container_name }}"
+          - "Network: {{ network_profiles[deployment_profile].network_mode }}"
+          - "Published ports: {{ published_ports.stdout }}"
+          - "Health: {{ health_result.stdout }}"

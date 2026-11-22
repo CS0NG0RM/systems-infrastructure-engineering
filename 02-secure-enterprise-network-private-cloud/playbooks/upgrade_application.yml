@@ -1,0 +1,422 @@
+---
+- name: Perform controlled application release upgrade
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    application_bind_address: "10.20.20.10"
+    application_host_port: 8080
+    container_name: enterprise-health
+    rollback_container: enterprise-health-rollback
+    target_version: "1.0.1"
+    target_image: "localhost/enterprise-health:{{ target_version }}"
+
+    network_profiles:
+      none:
+        - --network=none
+
+      enterprise-private:
+        - --network=enterprise-private
+        - --dns=none
+        - "--publish={{ application_bind_address }}:{{ application_host_port }}:8080/tcp"
+        - --env=SERVICE_HOST=0.0.0.0
+        - --env=SERVICE_PORT=8080
+
+    security_arguments:
+      - --pull=never
+      - --read-only
+      - --cap-drop=ALL
+      - --security-opt=no-new-privileges
+      - --memory=128m
+      - --pids-limit=32
+      - --user=10001:10001
+
+  tasks:
+    # Restrict execution to the intended application server.
+    - name: Validate release target
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+          - container_name != rollback_container
+
+    # Require the target release to exist locally.
+    - name: Verify target image availability
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ target_image }}"
+      changed_when: false
+
+    - name: Inspect current application
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - "{{ container_name }}"
+      register: current_inspection
+      changed_when: false
+
+    - name: Record current release configuration
+      ansible.builtin.set_fact:
+        current_container: >-
+          {{ (current_inspection.stdout | from_json)[0] }}
+
+    # Preserve the original image, identity and network configuration.
+    - name: Record previous deployment properties
+      ansible.builtin.set_fact:
+        previous_image: "{{ current_container.Config.Image }}"
+        previous_id: "{{ current_container.Id }}"
+        previous_network: >-
+          {{
+            'none'
+            if current_container.HostConfig.NetworkMode == 'none'
+            and (current_container.NetworkSettings.Networks.keys() | list) == ['none']
+            else 'enterprise-private'
+            if current_container.HostConfig.NetworkMode == 'bridge'
+            and (current_container.NetworkSettings.Networks.keys() | list) == ['enterprise-private']
+            else 'unsupported'
+          }}
+
+    - name: Validate existing deployment configuration
+      ansible.builtin.assert:
+        that:
+          - current_container.State.Running
+          - previous_network in network_profiles
+          - current_container.Config.User == '10001:10001'
+          - current_container.HostConfig.ReadonlyRootfs
+          - current_container.HostConfig.Memory == 134217728
+          - current_container.HostConfig.PidsLimit == 32
+        fail_msg: Existing deployment configuration is unexpected.
+
+    # Record existing port publication before changing container state.
+    - name: Inspect current application port publication
+      ansible.builtin.command:
+        argv:
+          - podman
+          - port
+          - "{{ container_name }}"
+      register: previous_ports
+      changed_when: false
+
+    - name: Validate existing port restrictions
+      ansible.builtin.assert:
+        that:
+          - >-
+            (previous_network == 'none'
+            and previous_ports.stdout | trim == '')
+            or
+            (previous_network == 'enterprise-private'
+            and previous_ports.stdout | trim
+            == ('8080/tcp -> ' ~ application_bind_address ~ ':' ~ (application_host_port | string)))
+
+    # Inspect the private network before attempting an upgrade.
+    - name: Inspect private network configuration
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - inspect
+          - enterprise-private
+      register: private_network_inspection
+      changed_when: false
+      when: previous_network == 'enterprise-private'
+
+    - name: Parse private network configuration
+      ansible.builtin.set_fact:
+        private_network: >-
+          {{ (private_network_inspection.stdout | from_json)[0] }}
+      when: previous_network == 'enterprise-private'
+
+    - name: Validate private network restrictions
+      ansible.builtin.assert:
+        that:
+          - private_network.driver == 'bridge'
+          - private_network.internal
+          - not private_network.dns_enabled
+          - not private_network.ipv6_enabled
+          - private_network.subnets | length == 1
+          - private_network.subnets[0].subnet == '10.89.50.0/24'
+      when: previous_network == 'enterprise-private'
+
+    # Prevent accidental replacement of a preserved release.
+    - name: Check rollback container availability
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ rollback_container }}"
+      register: rollback_check
+      changed_when: false
+      failed_when: rollback_check.rc not in [0, 1]
+
+    - name: Require an available rollback container name
+      ansible.builtin.assert:
+        that:
+          - rollback_check.rc == 1
+        fail_msg: Existing rollback container must be handled explicitly.
+      when: previous_image != target_image
+
+    - name: Perform controlled release upgrade
+      when: previous_image != target_image
+      block:
+        # Stop the previous release without deleting its configuration.
+        - name: Stop previous application release
+          ansible.builtin.command:
+            argv:
+              - podman
+              - stop
+              - --time
+              - "10"
+              - "{{ container_name }}"
+
+        - name: Retain previous container for rollback
+          ansible.builtin.command:
+            argv:
+              - podman
+              - rename
+              - "{{ container_name }}"
+              - "{{ rollback_container }}"
+
+        # Launch the candidate using the original network profile.
+        - name: Launch upgraded application
+          ansible.builtin.command:
+            argv: >-
+              {{
+                ['podman', 'run', '--detach', '--name', container_name]
+                + security_arguments
+                + network_profiles[previous_network]
+                + [target_image]
+              }}
+
+        - name: Inspect upgraded application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - inspect
+              - "{{ container_name }}"
+          register: upgraded_inspection
+          changed_when: false
+
+        - name: Parse upgraded application configuration
+          ansible.builtin.set_fact:
+            upgraded_container: >-
+              {{ (upgraded_inspection.stdout | from_json)[0] }}
+
+        - name: Validate upgraded container configuration
+          ansible.builtin.assert:
+            that:
+              - upgraded_container.Config.Image == target_image
+              - upgraded_container.Config.User == '10001:10001'
+              - upgraded_container.HostConfig.ReadonlyRootfs
+              - upgraded_container.HostConfig.NetworkMode == current_container.HostConfig.NetworkMode
+              - previous_network in upgraded_container.NetworkSettings.Networks
+              - upgraded_container.NetworkSettings.Networks | length == 1
+              - upgraded_container.HostConfig.Memory == 134217728
+              - upgraded_container.HostConfig.PidsLimit == 32
+              - upgraded_container.State.Running
+
+        - name: Inspect upgraded port publication
+          ansible.builtin.command:
+            argv:
+              - podman
+              - port
+              - "{{ container_name }}"
+          register: upgraded_ports
+          changed_when: false
+
+        - name: Verify upgraded port publication is unchanged
+          ansible.builtin.assert:
+            that:
+              - upgraded_ports.stdout | trim == previous_ports.stdout | trim
+
+        # Confirm both application health and expected release identity.
+        - name: Validate upgraded application health
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ container_name }}"
+              - /usr/bin/python3
+              - -c
+              - |
+                import json
+                import urllib.request
+
+                opener = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({})
+                )
+
+                with opener.open(
+                    "http://127.0.0.1:8080/health",
+                    timeout=5
+                ) as response:
+                    payload = json.load(response)
+
+                assert payload["status"] == "healthy"
+                assert payload["version"] == "{{ target_version }}"
+
+                print(json.dumps(payload))
+          register: health_result
+          changed_when: false
+          retries: 3
+          delay: 2
+          until: health_result.rc == 0
+
+        - name: Report successful application release
+          ansible.builtin.debug:
+            msg:
+              - "RELEASE UPGRADE VALIDATION PASSED"
+              - "Network profile: {{ previous_network }}"
+              - "Published ports: {{ upgraded_ports.stdout }}"
+              - "Health: {{ health_result.stdout }}"
+
+      rescue:
+        # Determine whether the original container was preserved.
+        - name: Locate preserved rollback container
+          ansible.builtin.command:
+            argv:
+              - podman
+              - container
+              - exists
+              - "{{ rollback_container }}"
+          register: recovery_check
+          changed_when: false
+          failed_when: recovery_check.rc not in [0, 1]
+
+        - name: Restore preserved application
+          when: recovery_check.rc == 0
+          block:
+            - name: Inspect preserved rollback container
+              ansible.builtin.command:
+                argv:
+                  - podman
+                  - inspect
+                  - "{{ rollback_container }}"
+              register: preserved_inspection
+              changed_when: false
+
+            # Verify identity before removing the failed candidate.
+            - name: Verify preserved container identity
+              ansible.builtin.assert:
+                that:
+                  - (preserved_inspection.stdout | from_json)[0].Id == previous_id
+
+            - name: Remove unsuccessful release
+              ansible.builtin.command:
+                argv:
+                  - podman
+                  - rm
+                  - --force
+                  - --ignore
+                  - "{{ container_name }}"
+
+            - name: Restore original container name
+              ansible.builtin.command:
+                argv:
+                  - podman
+                  - rename
+                  - "{{ rollback_container }}"
+                  - "{{ container_name }}"
+
+        - name: Inspect recovered application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - inspect
+              - "{{ container_name }}"
+          register: recovery_inspection
+          changed_when: false
+
+        - name: Parse recovered application configuration
+          ansible.builtin.set_fact:
+            recovered_container: >-
+              {{ (recovery_inspection.stdout | from_json)[0] }}
+
+        - name: Verify recovered container identity and configuration
+          ansible.builtin.assert:
+            that:
+              - recovered_container.Id == previous_id
+              - recovered_container.Config.Image == previous_image
+              - recovered_container.HostConfig.NetworkMode == current_container.HostConfig.NetworkMode
+              - previous_network in recovered_container.NetworkSettings.Networks
+              - recovered_container.NetworkSettings.Networks | length == 1
+
+        - name: Restart previous application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - start
+              - "{{ container_name }}"
+          when: not recovered_container.State.Running
+
+        # Confirm that rollback restores application availability.
+        - name: Verify recovered application health
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ container_name }}"
+              - /usr/bin/python3
+              - -c
+              - |
+                import json
+                import urllib.request
+
+                opener = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({})
+                )
+
+                with opener.open(
+                    "http://127.0.0.1:8080/health",
+                    timeout=5
+                ) as response:
+                    payload = json.load(response)
+
+                assert payload["status"] == "healthy"
+
+                print(json.dumps(payload))
+          register: recovery_health
+          changed_when: false
+          retries: 3
+          delay: 2
+          until: recovery_health.rc == 0
+
+        - name: Inspect recovered port publication
+          ansible.builtin.command:
+            argv:
+              - podman
+              - port
+              - "{{ container_name }}"
+          register: recovered_ports
+          changed_when: false
+
+        - name: Verify recovered port publication
+          ansible.builtin.assert:
+            that:
+              - recovered_ports.stdout | trim == previous_ports.stdout | trim
+
+        - name: Report rollback outcome
+          ansible.builtin.debug:
+            msg:
+              - "Original container identity restored: {{ previous_id }}"
+              - "Restored network: {{ previous_network }}"
+              - "Restored ports: {{ recovered_ports.stdout }}"
+              - "Recovered health: {{ recovery_health.stdout }}"
+
+        # Recovery does not change the failed release outcome.
+        - name: Report unsuccessful upgrade
+          ansible.builtin.fail:
+            msg: Upgrade failed. Previous application health was restored.
+
+    - name: Report unchanged deployment
+      ansible.builtin.debug:
+        msg:
+          - "Requested application release is already deployed."
+          - "Network profile: {{ previous_network }}"
+          - "Published ports: {{ previous_ports.stdout }}"
+      when: previous_image == target_image

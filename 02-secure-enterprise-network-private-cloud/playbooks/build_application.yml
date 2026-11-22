@@ -1,0 +1,81 @@
+---
+- name: Build enterprise application container
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    build_path: /opt/enterprise-platform/container-build
+    base_image: localhost/enterprise-python:3.9
+    application_version: "1.0.1"
+    application_image: "localhost/enterprise-health:{{ application_version }}"
+
+  tasks:
+    # Restrict execution to the intended laboratory server.
+    - name: Validate server identity
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+
+    # Require the locally constructed base image.
+    - name: Verify offline base image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ base_image }}"
+      changed_when: false
+
+    # Prepare a dedicated application build context.
+    - name: Create build directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0750'
+      loop:
+        - "{{ build_path }}"
+        - "{{ build_path }}/application"
+
+    # Transfer the current application release.
+    - name: Deploy application source
+      ansible.builtin.copy:
+        src: ../application/health_service.py
+        dest: "{{ build_path }}/application/health_service.py"
+        mode: '0644'
+
+    - name: Deploy container definition
+      ansible.builtin.copy:
+        src: ../containers/Containerfile
+        dest: "{{ build_path }}/Containerfile"
+        mode: '0644'
+
+    # Build the release without external network access.
+    - name: Construct application image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - build
+          - --pull=never
+          - --network=none
+          - --tag
+          - "{{ application_image }}"
+          - --file
+          - "{{ build_path }}/Containerfile"
+          - "{{ build_path }}"
+      register: build_result
+
+    - name: Report build result
+      ansible.builtin.debug:
+        var: build_result.stdout_lines
+
+    # Confirm that the versioned image is available locally.
+    - name: Validate application image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ application_image }}"
+      changed_when: false

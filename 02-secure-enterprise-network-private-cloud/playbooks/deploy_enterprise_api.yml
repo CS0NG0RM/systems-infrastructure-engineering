@@ -1,0 +1,329 @@
+---
+- name: Deploy the secure enterprise API
+  hosts: application_servers
+  gather_facts: false
+  become: false
+
+  vars:
+    api_name: enterprise-api
+    api_image: bc7263629e45
+    api_network: enterprise-api-private
+    api_subnet: "10.89.60.0/24"
+    api_volume: enterprise-api-data
+    api_bind_address: "127.0.0.1"
+    api_host_port: 18000
+    api_container_port: 8000
+    api_uid: 10001
+    api_gid: 10001
+    api_config_directory: /home/labadmin/enterprise-api-config
+    api_resolver_file: /home/labadmin/enterprise-api-config/resolv.conf
+
+  tasks:
+
+    # Require the locally imported image without contacting a registry.
+    - name: Check local enterprise API image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ api_image }}"
+      changed_when: false
+
+    # Protect the existing initialized enterprise database volume.
+    - name: Verify persistent application volume exists
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - exists
+          - "{{ api_volume }}"
+      changed_when: false
+
+    - name: Inspect persistent application volume
+      ansible.builtin.command:
+        argv:
+          - podman
+          - volume
+          - inspect
+          - "{{ api_volume }}"
+      register: api_volume_inspection
+      changed_when: false
+
+    - name: Extract persistent volume mountpoint
+      ansible.builtin.set_fact:
+        api_volume_path: >-
+          {{ (api_volume_inspection.stdout | from_json)[0].Mountpoint }}
+
+    # Inspect ownership inside the rootless user namespace.
+    - name: Verify persistent directory permissions
+      ansible.builtin.command:
+        argv:
+          - podman
+          - unshare
+          - stat
+          - -c
+          - "%u:%g %a"
+          - "{{ api_volume_path }}"
+      register: api_volume_permissions
+      changed_when: false
+
+    - name: Require secure persistent directory ownership
+      ansible.builtin.assert:
+        that:
+          - api_volume_permissions.stdout == '10001:10001 700'
+        fail_msg: Persistent volume ownership or permissions are incorrect.
+
+    # Require both initialized databases before starting the application.
+    - name: Verify persistent database files
+      ansible.builtin.command:
+        argv:
+          - podman
+          - unshare
+          - test
+          - -s
+          - "{{ api_volume_path }}/{{ item }}"
+      loop:
+        - enterprise.db
+        - identity.db
+      changed_when: false
+
+    # Maintain a dedicated empty resolver configuration.
+    - name: Ensure API configuration directory exists
+      ansible.builtin.file:
+        path: "{{ api_config_directory }}"
+        state: directory
+        mode: "0755"
+
+    - name: Maintain empty DNS resolver configuration
+      ansible.builtin.copy:
+        content: ""
+        dest: "{{ api_resolver_file }}"
+        mode: "0444"
+
+    - name: Check dedicated internal network
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - exists
+          - "{{ api_network }}"
+      register: api_network_exists
+      changed_when: false
+      failed_when: api_network_exists.rc not in [0, 1]
+
+    # Create the private network only when it is absent.
+    - name: Create dedicated internal API network
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - create
+          - --driver
+          - bridge
+          - --internal
+          - --disable-dns
+          - --subnet
+          - "{{ api_subnet }}"
+          - "{{ api_network }}"
+      when: api_network_exists.rc == 1
+
+    - name: Inspect dedicated API network
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - inspect
+          - "{{ api_network }}"
+      register: api_network_inspection
+      changed_when: false
+
+    - name: Extract network configuration
+      ansible.builtin.set_fact:
+        api_network_details: >-
+          {{ (api_network_inspection.stdout | from_json)[0] }}
+
+    # Refuse deployment if the network violates isolation requirements.
+    - name: Validate dedicated network security
+      ansible.builtin.assert:
+        that:
+          - api_network_details.driver == 'bridge'
+          - api_network_details.internal | bool
+          - not (api_network_details.dns_enabled | bool)
+          - not (api_network_details.ipv6_enabled | bool)
+          - api_network_details.subnets[0].subnet == api_subnet
+        fail_msg: The existing API network does not meet security requirements.
+
+    - name: Check whether enterprise API container exists
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ api_name }}"
+      register: api_container_exists
+      changed_when: false
+      failed_when: api_container_exists.rc not in [0, 1]
+
+    # Create the hardened application container only when absent.
+    - name: Deploy enterprise API container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - -d
+          - "--name={{ api_name }}"
+          - --pull=never
+          - "--network={{ api_network }}"
+          - --dns=none
+          - "--publish={{ api_bind_address }}:{{ api_host_port }}:{{ api_container_port }}/tcp"
+          - --read-only
+          - --cap-drop=ALL
+          - --security-opt=no-new-privileges
+          - --memory=256m
+          - --pids-limit=32
+          - "--user={{ api_uid }}:{{ api_gid }}"
+          - --restart=unless-stopped
+          - --env=ENTERPRISE_DATA_DIR=/app-data
+          - --env=PYTHONDONTWRITEBYTECODE=1
+          - --env=OTEL_SDK_DISABLED=true
+          - "--volume={{ api_volume }}:/app-data:Z"
+          - "--volume={{ api_resolver_file }}:/etc/resolv.conf:ro,Z"
+          - "{{ api_image }}"
+      when: api_container_exists.rc == 1
+
+    - name: Inspect enterprise API container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - "{{ api_name }}"
+      register: api_container_inspection
+      changed_when: false
+
+    - name: Extract container configuration
+      ansible.builtin.set_fact:
+        api_details: >-
+          {{ (api_container_inspection.stdout | from_json)[0] }}
+
+    # Validate existing configuration before starting a stopped container.
+    - name: Validate container security configuration
+      ansible.builtin.assert:
+        that:
+          - api_details.Image.startswith(api_image)
+          - api_details.Config.User == '10001:10001'
+          - api_details.HostConfig.ReadonlyRootfs | bool
+          - not (api_details.HostConfig.Privileged | bool)
+          - api_details.HostConfig.Memory == 268435456
+          - api_details.HostConfig.PidsLimit == 32
+          - api_details.HostConfig.RestartPolicy.Name == 'unless-stopped'
+          - api_details.NetworkSettings.Networks.keys() | list == [api_network]
+          - api_details.HostConfig.PortBindings['8000/tcp'] | length == 1
+          - api_details.HostConfig.PortBindings['8000/tcp'][0].HostIp == api_bind_address
+          - api_details.HostConfig.PortBindings['8000/tcp'][0].HostPort | string == api_host_port | string
+          - "'no-new-privileges' in (api_details.HostConfig.SecurityOpt | join(' '))"
+          - api_details.EffectiveCaps | default([], true) | length == 0
+          - "'ENTERPRISE_DATA_DIR=/app-data' in api_details.Config.Env"
+          - "'OTEL_SDK_DISABLED=true' in api_details.Config.Env"
+        fail_msg: Existing API container configuration differs from the required security baseline.
+
+    - name: Identify persistent data mount
+      ansible.builtin.set_fact:
+        api_data_mounts: >-
+          {{ api_details.Mounts
+             | selectattr('Destination', 'equalto', '/app-data')
+             | list }}
+        api_dns_mounts: >-
+          {{ api_details.Mounts
+             | selectattr('Destination', 'equalto', '/etc/resolv.conf')
+             | list }}
+
+    - name: Validate required persistent and resolver mounts
+      ansible.builtin.assert:
+        that:
+          - api_data_mounts | length == 1
+          - api_data_mounts[0].Name == api_volume
+          - api_data_mounts[0].RW | bool
+          - api_dns_mounts | length == 1
+          - api_dns_mounts[0].Source == api_resolver_file
+          - not (api_dns_mounts[0].RW | bool)
+        fail_msg: Application storage or DNS mount configuration is incorrect.
+
+    # Start the existing container only when it is stopped.
+    - name: Ensure enterprise API is running
+      ansible.builtin.command:
+        argv:
+          - podman
+          - start
+          - "{{ api_name }}"
+      when: not (api_details.State.Running | bool)
+
+    # Inspect the actual Linux security attributes of the application process.
+    - name: Inspect runtime process capabilities
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ api_name }}"
+          - cat
+          - /proc/1/status
+      register: api_process_security
+      changed_when: false
+
+    # Require all capability sets to be empty and privilege escalation disabled.
+    - name: Validate runtime process security
+      ansible.builtin.assert:
+        that:
+          - api_process_security.stdout is search('(?m)^CapInh:\s+0000000000000000$')
+          - api_process_security.stdout is search('(?m)^CapPrm:\s+0000000000000000$')
+          - api_process_security.stdout is search('(?m)^CapEff:\s+0000000000000000$')
+          - api_process_security.stdout is search('(?m)^CapBnd:\s+0000000000000000$')
+          - api_process_security.stdout is search('(?m)^CapAmb:\s+0000000000000000$')
+          - api_process_security.stdout is search('(?m)^NoNewPrivs:\s+1$')
+        fail_msg: Application process violates the runtime security baseline.
+        success_msg: All Linux capabilities are dropped and privilege escalation is disabled.
+
+    # Validate the resolver inside the actual running container.
+    - name: Verify runtime DNS isolation
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ api_name }}"
+          - python
+          - -c
+          - "from pathlib import Path; assert Path('/etc/resolv.conf').stat().st_size == 0; print('DNS isolation verified')"
+      changed_when: false
+
+    # Check health through the restricted Rocky loopback endpoint.
+    - name: Validate enterprise API health
+      ansible.builtin.uri:
+        url: "http://{{ api_bind_address }}:{{ api_host_port }}/health"
+        method: GET
+        return_content: true
+        use_proxy: false
+        follow_redirects: none
+        timeout: 5
+        status_code: 200
+      register: api_health
+      retries: 10
+      delay: 2
+      until: api_health.status | default(0) == 200
+      changed_when: false
+
+    - name: Verify application health response
+      ansible.builtin.assert:
+        that:
+          - api_health.json.status == 'healthy'
+          - api_health.json.service == 'enterprise-api-security-testing'
+        fail_msg: Enterprise API returned an unexpected health response.
+
+    - name: Report successful enterprise API deployment
+      ansible.builtin.debug:
+        msg:
+          - "Enterprise API deployment validated"
+          - "Application endpoint: {{ api_bind_address }}:{{ api_host_port }}"
+          - "Internal network: {{ api_network }}"
+          - "Persistent storage: {{ api_volume }}"
+          - "External image pulls disabled"
+          - "Application status: {{ api_health.json.status }}"

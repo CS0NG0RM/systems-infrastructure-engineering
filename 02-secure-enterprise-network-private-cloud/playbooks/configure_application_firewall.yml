@@ -1,0 +1,126 @@
+---
+- name: Configure restricted application firewall
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    application_rule: >-
+      rule family="ipv4" source address="10.20.10.10/32"
+      destination address="10.20.20.10/32"
+      port port="8080" protocol="tcp" accept
+
+  tasks:
+    # Validate the intended application server before changing its firewall.
+    - name: Validate firewall configuration target
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+
+    # Confirm that firewalld is operational.
+    - name: Verify firewall service availability
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --state
+      become: true
+      changed_when: false
+
+    # Check whether the persistent rule already exists.
+    - name: Check permanent application firewall rule
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --permanent
+          - --zone=public
+          - "--query-rich-rule={{ application_rule }}"
+      become: true
+      register: permanent_rule
+      changed_when: false
+      failed_when: permanent_rule.rc not in [0, 1]
+
+    # Persist only the explicitly authorized source and destination.
+    - name: Configure permanent application firewall rule
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --permanent
+          - --zone=public
+          - "--add-rich-rule={{ application_rule }}"
+      become: true
+      when: permanent_rule.rc == 1
+
+    # Check runtime policy independently of persistent configuration.
+    - name: Check active application firewall rule
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone=public
+          - "--query-rich-rule={{ application_rule }}"
+      become: true
+      register: runtime_rule
+      changed_when: false
+      failed_when: runtime_rule.rc not in [0, 1]
+
+    # Apply the rule without reloading unrelated firewall settings.
+    - name: Activate restricted application firewall rule
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone=public
+          - "--add-rich-rule={{ application_rule }}"
+      become: true
+      when: runtime_rule.rc == 1
+
+    - name: Verify active application firewall rule
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone=public
+          - "--query-rich-rule={{ application_rule }}"
+      become: true
+      changed_when: false
+
+    - name: Verify persistent application firewall rule
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --permanent
+          - --zone=public
+          - "--query-rich-rule={{ application_rule }}"
+      become: true
+      changed_when: false
+
+    # Confirm that unrestricted application port access is not enabled.
+    - name: Verify unrestricted TCP 8080 is absent
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone=public
+          - --query-port=8080/tcp
+      become: true
+      register: unrestricted_port
+      changed_when: false
+      failed_when: unrestricted_port.rc != 1
+
+    - name: Inspect active firewall configuration
+      ansible.builtin.command:
+        argv:
+          - firewall-cmd
+          - --zone=public
+          - --list-all
+      become: true
+      register: firewall_configuration
+      changed_when: false
+
+    - name: Report restricted firewall configuration
+      ansible.builtin.debug:
+        msg:
+          - "APPLICATION FIREWALL VALIDATION PASSED"
+          - "Authorized source: 10.20.10.10/32"
+          - "Destination: 10.20.20.10"
+          - "Protocol: TCP"
+          - "Port: 8080"
+          - "Unrestricted TCP 8080: absent"
+          - "{{ firewall_configuration.stdout_lines }}"

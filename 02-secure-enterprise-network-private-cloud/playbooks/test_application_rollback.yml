@@ -1,0 +1,149 @@
+---
+- name: Prepare isolated application rollback test
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    test_container: enterprise-health-rollback-test
+    test_previous: enterprise-health-rollback-test-previous
+    stable_image: localhost/enterprise-health:1.0.1
+
+  tasks:
+    # Restrict the integration test to the designated laboratory.
+    - name: Validate test environment
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+
+    # Ensure neither disposable name is already occupied.
+    - name: Check disposable container names
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ item }}"
+      loop:
+        - "{{ test_container }}"
+        - "{{ test_previous }}"
+      register: name_checks
+      changed_when: false
+      failed_when: name_checks.rc != 1
+
+    # Require both releases to exist in offline image storage.
+    - name: Check required local images
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ item }}"
+      loop:
+        - localhost/enterprise-health:1.0.0
+        - "{{ stable_image }}"
+      changed_when: false
+
+    # Record protected container identities and runtime states.
+    - name: Inspect protected containers
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - enterprise-health
+          - enterprise-health-rollback
+      register: protected_before
+      changed_when: false
+
+    - name: Store protected container baseline
+      ansible.builtin.set_fact:
+        protected_baseline: >-
+          {{ protected_before.stdout | from_json }}
+
+    # Create a disposable deployment with production-equivalent restrictions.
+    - name: Launch isolated stable test release
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --detach
+          - --name
+          - "{{ test_container }}"
+          - --pull=never
+          - --network=none
+          - --read-only
+          - --cap-drop=ALL
+          - --security-opt=no-new-privileges
+          - --memory=128m
+          - --pids-limit=32
+          - --user=10001:10001
+          - "{{ stable_image }}"
+      register: test_launch
+
+    # Save the original identity for exact recovery verification.
+    - name: Record original test container ID
+      ansible.builtin.set_fact:
+        original_test_id: "{{ test_launch.stdout | trim }}"
+
+    - name: Verify stable test application health
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ test_container }}"
+          - /usr/bin/python3
+          - -c
+          - |
+            import json
+            import urllib.request
+
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({})
+            )
+
+            with opener.open(
+                "http://127.0.0.1:8080/health",
+                timeout=5
+            ) as response:
+                payload = json.load(response)
+
+            assert payload["status"] == "healthy"
+            assert payload["version"] == "1.0.1"
+
+            print(json.dumps(payload))
+      register: initial_health
+      changed_when: false
+      retries: 3
+      delay: 2
+      until: initial_health.rc == 0
+
+    - name: Report initial application state
+      ansible.builtin.debug:
+        msg:
+          - "Original container ID: {{ original_test_id }}"
+          - "Initial health: {{ initial_health.stdout }}"
+
+    # Save evidence locally on the managed host for the verification playbook.
+    - name: Save rollback test baseline
+      ansible.builtin.copy:
+        dest: /home/labadmin/.enterprise-rollback-test.json
+        mode: "0600"
+        content: >-
+          {{
+            {
+              'original_test_id': original_test_id,
+              'protected_containers': [
+                {
+                  'id': protected_baseline[0].Id,
+                  'running': protected_baseline[0].State.Running,
+                  'started_at': protected_baseline[0].State.StartedAt
+                },
+                {
+                  'id': protected_baseline[1].Id,
+                  'running': protected_baseline[1].State.Running,
+                  'started_at': protected_baseline[1].State.StartedAt
+                }
+              ]
+            } | to_nice_json
+          }}

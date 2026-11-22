@@ -1,0 +1,103 @@
+---
+- name: Build offline enterprise container base image
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    rootfs_path: /opt/enterprise-platform/image-rootfs
+    archive_path: /opt/enterprise-platform/python-rootfs.tar
+    base_image: localhost/enterprise-python:3.9
+
+  tasks:
+    # Prevent execution against an unintended server.
+    - name: Validate target server identity
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+
+    # Confirm that the prepared Python runtime exists.
+    - name: Inspect offline Python filesystem
+      ansible.builtin.stat:
+        path: "{{ rootfs_path }}/usr/bin/python3"
+      register: python_runtime
+
+    - name: Require prepared filesystem
+      ansible.builtin.assert:
+        that:
+          - python_runtime.stat.exists
+        fail_msg: Offline Python filesystem is missing
+
+    # Avoid rebuilding an existing base image unnecessarily.
+    - name: Check local base image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ base_image }}"
+      register: image_check
+      changed_when: false
+      failed_when: image_check.rc not in [0, 1]
+
+    - name: Construct local base image
+      when: image_check.rc == 1
+      block:
+        # Archive the filesystem contents without an enclosing directory.
+        - name: Create filesystem archive
+          become: true
+          ansible.builtin.command:
+            argv:
+              - /usr/bin/python3
+              - -c
+              - |
+                import os
+                import tarfile
+
+                os.umask(0o077)
+
+                with tarfile.open("{{ archive_path }}", "w") as archive:
+                    archive.add("{{ rootfs_path }}", arcname=".")
+
+        # Restrict archive access to the administration account.
+        - name: Set archive permissions
+          become: true
+          ansible.builtin.file:
+            path: "{{ archive_path }}"
+            owner: labadmin
+            group: labadmin
+            mode: '0600'
+
+        # Import the filesystem into rootless Podman storage.
+        - name: Import prepared filesystem
+          ansible.builtin.command:
+            argv:
+              - podman
+              - import
+              - "{{ archive_path }}"
+              - "{{ base_image }}"
+
+      always:
+        # Remove the temporary archive after the import attempt.
+        - name: Remove temporary filesystem archive
+          become: true
+          ansible.builtin.file:
+            path: "{{ archive_path }}"
+            state: absent
+
+    # Retrieve the image identity for deployment verification.
+    - name: Inspect local base image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - inspect
+          - "{{ base_image }}"
+          - --format
+          - "{{ '{{' }} .Id {{ '}}' }}"
+      register: image_identity
+      changed_when: false
+
+    - name: Report base image identity
+      ansible.builtin.debug:
+        var: image_identity.stdout

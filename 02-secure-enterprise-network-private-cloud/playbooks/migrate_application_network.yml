@@ -1,0 +1,238 @@
+---
+- name: Promote validated private network application
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    primary_container: enterprise-health
+    candidate_container: enterprise-health-network-test
+    isolated_backup: enterprise-health-isolated-backup
+    preserved_rollback: enterprise-health-rollback
+
+  tasks:
+    # Restrict migration to the intended rootless laboratory environment.
+    - name: Validate migration target
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+
+    # Record all existing container identities before migration.
+    - name: Inspect existing application containers
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - "{{ primary_container }}"
+          - "{{ candidate_container }}"
+          - "{{ preserved_rollback }}"
+      register: initial_inspection
+      changed_when: false
+
+    - name: Record original deployment state
+      ansible.builtin.set_fact:
+        original_primary: >-
+          {{ (initial_inspection.stdout | from_json)[0] }}
+        original_candidate: >-
+          {{ (initial_inspection.stdout | from_json)[1] }}
+        original_rollback: >-
+          {{ (initial_inspection.stdout | from_json)[2] }}
+
+    # Reject unexpected application configurations before changing state.
+    - name: Validate migration prerequisites
+      ansible.builtin.assert:
+        that:
+          - original_primary.State.Running
+          - original_candidate.State.Running
+          - not original_rollback.State.Running
+          - original_primary.Config.Image == 'localhost/enterprise-health:1.0.1'
+          - original_candidate.Config.Image == 'localhost/enterprise-health:1.0.1'
+          - original_primary.HostConfig.NetworkMode == 'none'
+          - original_candidate.HostConfig.NetworkMode == 'bridge'
+          - enterprise_network in original_candidate.NetworkSettings.Networks
+          - original_candidate.NetworkSettings.Networks | length == 1
+          - original_candidate.Config.User == '10001:10001'
+          - original_candidate.HostConfig.ReadonlyRootfs
+          - original_candidate.HostConfig.Memory == 134217728
+          - original_candidate.HostConfig.PidsLimit == 32
+      vars:
+        enterprise_network: enterprise-private
+
+    - name: Check isolated backup name availability
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ isolated_backup }}"
+      register: backup_check
+      changed_when: false
+      failed_when: backup_check.rc != 1
+
+    # Confirm the existing candidate is healthy before promotion.
+    - name: Verify candidate application health
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ candidate_container }}"
+          - /usr/bin/python3
+          - -c
+          - |
+            import json
+            import urllib.request
+
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({})
+            )
+
+            with opener.open(
+                "http://127.0.0.1:8080/health",
+                timeout=5
+            ) as response:
+                payload = json.load(response)
+
+            assert payload["status"] == "healthy"
+            assert payload["version"] == "1.0.1"
+
+            print(json.dumps(payload))
+      changed_when: false
+
+    - name: Perform controlled application migration
+      block:
+        # Stop the original isolated application without deleting it.
+        - name: Stop original isolated application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - stop
+              - --time
+              - "10"
+              - "{{ primary_container }}"
+
+        - name: Preserve original isolated application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - rename
+              - "{{ primary_container }}"
+              - "{{ isolated_backup }}"
+
+        # Promote the existing network-enabled container by identity.
+        - name: Promote validated network application
+          ansible.builtin.command:
+            argv:
+              - podman
+              - rename
+              - "{{ candidate_container }}"
+              - "{{ primary_container }}"
+
+        - name: Inspect migrated application state
+          ansible.builtin.command:
+            argv:
+              - podman
+              - inspect
+              - "{{ primary_container }}"
+              - "{{ isolated_backup }}"
+              - "{{ preserved_rollback }}"
+          register: migrated_inspection
+          changed_when: false
+
+        - name: Parse migrated application state
+          ansible.builtin.set_fact:
+            migrated_primary: >-
+              {{ (migrated_inspection.stdout | from_json)[0] }}
+            migrated_backup: >-
+              {{ (migrated_inspection.stdout | from_json)[1] }}
+            migrated_rollback: >-
+              {{ (migrated_inspection.stdout | from_json)[2] }}
+
+        # Verify that promotion preserved all three container identities.
+        - name: Verify migrated container identities
+          ansible.builtin.assert:
+            that:
+              - migrated_primary.Id == original_candidate.Id
+              - migrated_primary.State.Running
+              - migrated_primary.State.StartedAt == original_candidate.State.StartedAt
+              - migrated_backup.Id == original_primary.Id
+              - not migrated_backup.State.Running
+              - migrated_rollback.Id == original_rollback.Id
+              - not migrated_rollback.State.Running
+              - migrated_rollback.State.StartedAt == original_rollback.State.StartedAt
+
+        - name: Inspect promoted application port publication
+          ansible.builtin.command:
+            argv:
+              - podman
+              - port
+              - "{{ primary_container }}"
+          register: migrated_ports
+          changed_when: false
+
+        - name: Verify promoted application port restrictions
+          ansible.builtin.assert:
+            that:
+              - migrated_ports.stdout | trim == '8080/tcp -> 10.20.20.10:8080'
+
+        - name: Verify promoted application health
+          ansible.builtin.command:
+            argv:
+              - podman
+              - exec
+              - "{{ primary_container }}"
+              - /usr/bin/python3
+              - -c
+              - |
+                import json
+                import urllib.request
+
+                opener = urllib.request.build_opener(
+                    urllib.request.ProxyHandler({})
+                )
+
+                with opener.open(
+                    "http://127.0.0.1:8080/health",
+                    timeout=5
+                ) as response:
+                    payload = json.load(response)
+
+                assert payload["status"] == "healthy"
+                assert payload["version"] == "1.0.1"
+
+                print(json.dumps(payload))
+          register: migrated_health
+          changed_when: false
+          retries: 3
+          delay: 2
+          until: migrated_health.rc == 0
+
+        - name: Report successful permanent migration
+          ansible.builtin.debug:
+            msg:
+              - "APPLICATION NETWORK MIGRATION PASSED"
+              - "Primary container: {{ primary_container }}"
+              - "Primary identity: {{ migrated_primary.Id }}"
+              - "Original isolated container preserved: {{ isolated_backup }}"
+              - "Previous rollback container preserved: {{ preserved_rollback }}"
+              - "Published ports: {{ migrated_ports.stdout }}"
+              - "Health: {{ migrated_health.stdout }}"
+
+      rescue:
+        # Preserve available containers for controlled recovery.
+        - name: Inspect container state after migration failure
+          ansible.builtin.command:
+            argv:
+              - podman
+              - ps
+              - --all
+          register: failure_state
+          changed_when: false
+
+        - name: Report migration recovery information
+          ansible.builtin.debug:
+            var: failure_state.stdout_lines
+
+        - name: Stop migration after unexpected failure
+          ansible.builtin.fail:
+            msg: Migration failed. Existing containers retained for controlled recovery.

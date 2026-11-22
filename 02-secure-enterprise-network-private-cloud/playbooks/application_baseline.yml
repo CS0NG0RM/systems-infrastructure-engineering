@@ -1,0 +1,102 @@
+---
+- name: Configure enterprise application server baseline
+  hosts: application_servers
+  become: true
+  gather_facts: true
+
+  tasks:
+    # Verify the intended enterprise Linux server.
+    - name: Validate operating system and server identity
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['hostname'] == 'labapp01'
+        fail_msg: Unexpected target environment
+
+    # Inspect whether rootless services can persist after logout.
+    - name: Inspect rootless user persistence
+      ansible.builtin.command:
+        argv:
+          - loginctl
+          - show-user
+          - labadmin
+          - --property=Linger
+          - --value
+      register: user_linger
+      changed_when: false
+
+    # Enable lingering only when it is not already configured.
+    - name: Enable persistent rootless user services
+      ansible.builtin.command:
+        argv:
+          - loginctl
+          - enable-linger
+          - labadmin
+      when: user_linger.stdout | trim != 'yes'
+
+    # Verify that the required persistence configuration is active.
+    - name: Verify rootless user persistence
+      ansible.builtin.command:
+        argv:
+          - loginctl
+          - show-user
+          - labadmin
+          - --property=Linger
+          - --value
+      register: verified_linger
+      changed_when: false
+      failed_when: verified_linger.rc != 0 or (verified_linger.stdout | trim != 'yes')
+
+    # Create standardized application directories.
+    - name: Create application directory structure
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: labadmin
+        group: labadmin
+        mode: '0750'
+      loop:
+        - /opt/enterprise-platform
+        - /opt/enterprise-platform/config
+        - /opt/enterprise-platform/data
+        - /opt/enterprise-platform/logs
+        - /opt/enterprise-platform/backups
+
+    # Podman requires the resolver file during network initialization.
+    # Preserve any existing file and do not configure external DNS servers.
+    - name: Ensure offline resolver configuration exists
+      ansible.builtin.copy:
+        dest: /etc/resolv.conf
+        content: ""
+        owner: root
+        group: root
+        mode: '0644'
+        force: false
+
+    # Record the approved application environment.
+    - name: Deploy application environment configuration
+      ansible.builtin.copy:
+        dest: /opt/enterprise-platform/config/environment.yml
+        owner: labadmin
+        group: labadmin
+        mode: '0640'
+        content: |
+          environment: isolated-laboratory
+          server: labapp01
+          application_address: 10.20.20.10
+          application_port: 8080
+          management_address: 10.20.10.10
+          container_network: enterprise-private
+          container_subnet: 10.89.50.0/24
+          external_connectivity: prohibited
+          data_classification: synthetic
+
+    # Maintain required infrastructure security services.
+    - name: Maintain security services
+      ansible.builtin.systemd_service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - sshd
+        - firewalld

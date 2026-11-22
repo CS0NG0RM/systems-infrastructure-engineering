@@ -1,0 +1,308 @@
+---
+- name: Deploy restricted enterprise application network
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    network_name: enterprise-private
+    network_subnet: 10.89.50.0/24
+    test_container: enterprise-health-network-test
+    application_image: localhost/enterprise-health:1.0.1
+    application_host: 10.20.20.10
+    application_port: "8080"
+
+  tasks:
+    # Restrict execution to the intended rootless application environment.
+    - name: Validate deployment target
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+
+    # Verify the existing image without contacting a registry.
+    - name: Verify local application image
+      ansible.builtin.command:
+        argv:
+          - podman
+          - image
+          - exists
+          - "{{ application_image }}"
+      changed_when: false
+
+    # Avoid replacing an existing container with the test name.
+    - name: Check disposable container availability
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ test_container }}"
+      register: container_check
+      changed_when: false
+      failed_when: container_check.rc != 1
+
+    - name: Check dedicated network availability
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - exists
+          - "{{ network_name }}"
+      register: network_check
+      changed_when: false
+      failed_when: network_check.rc not in [0, 1]
+
+    # Collect existing network definitions before allocating a subnet.
+    - name: Discover existing Podman networks
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - ls
+          - --quiet
+      register: existing_networks
+      changed_when: false
+
+    - name: Inspect existing network subnets
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - inspect
+          - "{{ item }}"
+      loop: "{{ existing_networks.stdout_lines }}"
+      register: existing_network_details
+      changed_when: false
+
+    # Reject overlapping IPv4 or IPv6 network definitions.
+    - name: Verify proposed subnet does not overlap
+      ansible.builtin.command:
+        argv:
+          - /usr/bin/python3
+          - -c
+          - |
+            import ipaddress
+            import json
+            import sys
+
+            proposed = ipaddress.ip_network(sys.argv[1])
+            networks = json.loads(sys.argv[2])
+
+            for network in networks:
+                if network["name"] == sys.argv[3]:
+                    continue
+
+                for entry in network.get("subnets", []):
+                    existing = ipaddress.ip_network(entry["subnet"])
+
+                    if proposed.version == existing.version:
+                        assert not proposed.overlaps(existing), (
+                            f"Subnet overlap detected: {existing}"
+                        )
+
+            print("No existing Podman subnet overlaps detected")
+          - "{{ network_subnet }}"
+          - "{{ item.stdout }}"
+          - "{{ network_name }}"
+      loop: "{{ existing_network_details.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      changed_when: false
+
+    # Create a dedicated bridge without unrestricted external routing.
+    - name: Create internal application network
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - create
+          - --driver=bridge
+          - --internal
+          - --disable-dns
+          - "--subnet={{ network_subnet }}"
+          - "{{ network_name }}"
+      when: network_check.rc == 1
+
+    - name: Inspect dedicated network configuration
+      ansible.builtin.command:
+        argv:
+          - podman
+          - network
+          - inspect
+          - "{{ network_name }}"
+      register: network_inspection
+      changed_when: false
+
+    - name: Parse network configuration
+      ansible.builtin.set_fact:
+        network_details: >-
+          {{ (network_inspection.stdout | from_json)[0] }}
+
+    # Prevent deployment if an existing network has unexpected settings.
+    - name: Validate restricted network configuration
+      ansible.builtin.assert:
+        that:
+          - network_details.driver == 'bridge'
+          - network_details.internal
+          - not network_details.dns_enabled
+          - not network_details.ipv6_enabled
+          - network_details.subnets | length == 1
+          - network_details.subnets[0].subnet == network_subnet
+        success_msg: Internal application network validated.
+
+    # Publish the application only on the designated private host address.
+    - name: Launch restricted network test container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - run
+          - --detach
+          - --name
+          - "{{ test_container }}"
+          - --pull=never
+          - "--network={{ network_name }}"
+          - --dns=none
+          - "--publish={{ application_host }}:{{ application_port }}:8080/tcp"
+          - --env=SERVICE_HOST=0.0.0.0
+          - --env=SERVICE_PORT=8080
+          - --read-only
+          - --cap-drop=ALL
+          - --security-opt=no-new-privileges
+          - --memory=128m
+          - --pids-limit=32
+          - --user=10001:10001
+          - "{{ application_image }}"
+
+    # Verify that the container configuration retains security restrictions.
+    - name: Inspect network test container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - "{{ test_container }}"
+      register: container_inspection
+      changed_when: false
+
+    - name: Parse test container configuration
+      ansible.builtin.set_fact:
+        container_details: >-
+          {{ (container_inspection.stdout | from_json)[0] }}
+
+    - name: Validate test container configuration
+      ansible.builtin.assert:
+        that:
+          - container_details.Config.Image == application_image
+          - container_details.Config.User == '10001:10001'
+          - container_details.HostConfig.ReadonlyRootfs
+          - container_details.HostConfig.Memory == 134217728
+          - container_details.HostConfig.PidsLimit == 32
+          - network_name in container_details.NetworkSettings.Networks
+          - container_details.NetworkSettings.Networks | length == 1
+          - container_details.State.Running
+
+    # Confirm that the application responds within its network namespace.
+    - name: Verify application health inside container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ test_container }}"
+          - /usr/bin/python3
+          - -c
+          - |
+            import json
+            import urllib.request
+
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({})
+            )
+
+            with opener.open(
+                "http://127.0.0.1:8080/health",
+                timeout=5
+            ) as response:
+                payload = json.load(response)
+
+            assert payload["status"] == "healthy"
+            assert payload["version"] == "1.0.1"
+
+            print(json.dumps(payload))
+      register: health_result
+      changed_when: false
+      retries: 3
+      delay: 2
+      until: health_result.rc == 0
+
+    # Inspect routing without attempting any external connection.
+    - name: Verify container routing restrictions
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ test_container }}"
+          - /usr/bin/python3
+          - -c
+          - |
+            from pathlib import Path
+
+            routes = Path("/proc/net/route").read_text()
+            ipv6_routes = Path("/proc/net/ipv6_route").read_text()
+
+            ipv4_default = any(
+                line.split()[1] == "00000000"
+                for line in routes.splitlines()[1:]
+                if len(line.split()) > 1
+            )
+
+            ipv6_default = any(
+                fields[0] == "0" * 32
+                and fields[1] == "00"
+                and fields[-1] != "lo"
+                for fields in (
+                    line.split()
+                    for line in ipv6_routes.splitlines()
+                )
+                if len(fields) >= 10
+            )
+
+            print("IPv4 routing table:")
+            print(routes)
+            print("IPv6 routing table:")
+            print(ipv6_routes)
+
+            assert not ipv4_default, "IPv4 default route detected"
+            assert not ipv6_default, "IPv6 default route detected"
+
+            print("No non-loopback default routes detected")
+      register: route_validation
+      changed_when: false
+
+    # Confirm the requested port is published only on the private address.
+    - name: Inspect published application port
+      ansible.builtin.command:
+        argv:
+          - podman
+          - port
+          - "{{ test_container }}"
+          - 8080/tcp
+      register: published_port
+      changed_when: false
+
+    - name: Verify restricted port publication
+      ansible.builtin.assert:
+        that:
+          - published_port.stdout | trim == application_host + ':' + application_port
+        success_msg: Application port is bound to the designated private address.
+
+    - name: Report restricted network deployment
+      ansible.builtin.debug:
+        msg:
+          - "NETWORK DEPLOYMENT VALIDATION PASSED"
+          - "Network: {{ network_name }}"
+          - "Subnet: {{ network_subnet }}"
+          - "Internal network: {{ network_details.internal }}"
+          - "DNS enabled: {{ network_details.dns_enabled }}"
+          - "Published port: {{ published_port.stdout }}"
+          - "Health: {{ health_result.stdout }}"
+          - "{{ route_validation.stdout }}"

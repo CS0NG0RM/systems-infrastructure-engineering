@@ -1,0 +1,153 @@
+---
+- name: Verify automatic application rollback
+  hosts: application_servers
+  gather_facts: true
+
+  vars:
+    test_container: enterprise-health-rollback-test
+    test_previous: enterprise-health-rollback-test-previous
+
+  tasks:
+    - name: Validate verification environment
+      ansible.builtin.assert:
+        that:
+          - ansible_facts['hostname'] == 'labapp01'
+          - ansible_facts['os_family'] == 'RedHat'
+          - ansible_facts['user_id'] == 'labadmin'
+
+    # Load the baseline recorded before the unsuccessful upgrade.
+    - name: Read original container baseline
+      ansible.builtin.slurp:
+        src: /home/labadmin/.enterprise-rollback-test.json
+      register: baseline_file
+
+    - name: Decode original container baseline
+      ansible.builtin.set_fact:
+        baseline: >-
+          {{ baseline_file.content | b64decode | from_json }}
+
+    - name: Inspect recovered test container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - "{{ test_container }}"
+      register: recovered_inspection
+      changed_when: false
+
+    - name: Parse recovered container configuration
+      ansible.builtin.set_fact:
+        recovered: >-
+          {{ (recovered_inspection.stdout | from_json)[0] }}
+
+    # Prove that the original container was restored rather than recreated.
+    - name: Verify original container identity and release
+      ansible.builtin.assert:
+        that:
+          - recovered.Id == baseline.original_test_id
+          - recovered.Config.Image == 'localhost/enterprise-health:1.0.1'
+          - recovered.State.Running
+        success_msg: Original container identity and release restored.
+
+    - name: Verify recovered application health
+      ansible.builtin.command:
+        argv:
+          - podman
+          - exec
+          - "{{ test_container }}"
+          - /usr/bin/python3
+          - -c
+          - |
+            import json
+            import urllib.request
+
+            opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({})
+            )
+
+            with opener.open(
+                "http://127.0.0.1:8080/health",
+                timeout=5
+            ) as response:
+                payload = json.load(response)
+
+            assert payload["status"] == "healthy"
+            assert payload["version"] == "1.0.1"
+
+            print(json.dumps(payload))
+      register: restored_health
+      changed_when: false
+      retries: 3
+      delay: 2
+      until: restored_health.rc == 0
+
+    # Successful recovery should consume the temporary rollback name.
+    - name: Confirm temporary rollback name is absent
+      ansible.builtin.command:
+        argv:
+          - podman
+          - container
+          - exists
+          - "{{ test_previous }}"
+      register: previous_check
+      changed_when: false
+      failed_when: previous_check.rc != 1
+
+    - name: Inspect protected application containers
+      ansible.builtin.command:
+        argv:
+          - podman
+          - inspect
+          - enterprise-health
+          - enterprise-health-rollback
+      register: protected_after
+      changed_when: false
+
+    - name: Parse protected application state
+      ansible.builtin.set_fact:
+        protected_current: >-
+          {{ protected_after.stdout | from_json }}
+
+    # Verify that neither protected container was replaced or restarted.
+    - name: Verify protected containers remain unchanged
+      ansible.builtin.assert:
+        that:
+          - protected_current[0].Id == baseline.protected_containers[0].id
+          - protected_current[0].State.Running == baseline.protected_containers[0].running
+          - protected_current[0].State.StartedAt == baseline.protected_containers[0].started_at
+          - protected_current[1].Id == baseline.protected_containers[1].id
+          - protected_current[1].State.Running == baseline.protected_containers[1].running
+          - protected_current[1].State.StartedAt == baseline.protected_containers[1].started_at
+        success_msg: Both protected containers match the original baseline.
+
+    - name: Report verified rollback results
+      ansible.builtin.debug:
+        msg:
+          - "ROLLBACK VERIFICATION PASSED"
+          - "Original ID: {{ baseline.original_test_id }}"
+          - "Recovered ID: {{ recovered.Id }}"
+          - "Recovered health: {{ restored_health.stdout }}"
+          - "Temporary rollback name: absent"
+          - "Protected containers: unchanged"
+
+    # Clean up only the verified disposable deployment.
+    - name: Stop recovered test container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - stop
+          - --time
+          - "10"
+          - "{{ test_container }}"
+
+    - name: Remove recovered test container
+      ansible.builtin.command:
+        argv:
+          - podman
+          - rm
+          - "{{ test_container }}"
+
+    - name: Remove temporary baseline file
+      ansible.builtin.file:
+        path: /home/labadmin/.enterprise-rollback-test.json
+        state: absent
