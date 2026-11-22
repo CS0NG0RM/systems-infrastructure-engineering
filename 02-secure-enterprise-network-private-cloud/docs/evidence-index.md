@@ -1,4 +1,3 @@
-
 # Engineering Evidence Index
 
 ## 1. Overview
@@ -7,11 +6,11 @@ This document provides a structured record of the technical evidence collected d
 
 The evidence covers the complete infrastructure engineering lifecycle, including virtualization, network segmentation, Linux administration, container engineering, infrastructure automation, application security, disaster recovery and operational monitoring.
 
-The finalized evidence archive contains **67 screenshots**, organized by engineering discipline and implementation stage.
+The public repository contains **50 curated engineering screenshots**, linked directly from the tables below. The separate local working archive retains **67 original screenshots**, including implementation-stage and supplementary records not selected for publication.
 
 Each evidence reference documents a specific technical configuration, implementation activity, test scenario or observed validation result.
 
-The evidence is maintained separately from the source code repository and supports the engineering outcomes presented throughout the project documentation.
+The curated evidence is published in the repository's [`evidence/`](../evidence/) directory. Each linked file opens the actual screenshot. The full original archive remains local and is not published in its entirety.
 
 ## 2. Evidence Organization and Methodology
 
@@ -32,28 +31,20 @@ The collection covers:
 
 The standardized evidence filenames retain their original implementation references where applicable.
 
-The underlying screenshots are preserved separately from the Git repository.
+The original, uncurated screenshots are retained in the local evidence archive. The selected 50 screenshots are included in the public Git repository.
 
 ## 3. Virtual Infrastructure and Network Configuration
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 01 | 01-hyper-v-private-switch-configuration.png | Hyper-V private virtual switch configuration |
-| 02 | 02-opnsense-network-configuration.png | OPNsense network interfaces and segmentation |
-| 03 | 03-opnsense-routing-isolation.png | Routing isolation and restricted network connectivity |
-| 04 | 04-opnsense-operational-dashboard.png | Operational firewall infrastructure |
-| 05 | 05-ubuntu-management-server-installation.png | Ubuntu management server installation |
-| 06 | 06-windows-to-management-server-connectivity.png | Windows-to-Ubuntu SSH connectivity validation |
-| 07 | 07-rocky-linux-initial-network-configuration.png | Rocky Linux network and security configuration |
-| 08 | 08-rocky-linux-segment-routing-configuration.png | Static application network routing |
-| 09 | 09-rocky-linux-host-firewall-hardening.png | Linux firewall and forwarding restrictions |
-| 10 | 10-firewall-policy-enforcement.png | OPNsense firewall policy enforcement |
-| 11 | 11-firewall-resource-optimization.png | Firewall resource configuration |
-| 12 | 12-opnsense-packet-filter-rules.png | Active packet-filter rule inspection |
-| 13 | 13-opnsense-packet-filter-status.png | Packet-filter status and operational statistics |
-| 14 | 14-rocky-linux-ssh-and-firewall-verification.png | SSH and host firewall validation |
-| 15 | 15-key-based-automation-validation.png | SSH key-based infrastructure automation |
-| 16 | 16-cross-segment-ssh-and-management-network-validation.png | Cross-segment SSH and management connectivity |
+| 02 | [02-opnsense-network-configuration.png](../evidence/02-opnsense-network-configuration.png) | OPNsense network interfaces and segmentation |
+| 03 | [03-opnsense-routing-isolation.png](../evidence/03-opnsense-routing-isolation.png) | Routing isolation and restricted network connectivity |
+| 04 | [04-opnsense-operational-dashboard.png](../evidence/04-opnsense-operational-dashboard.png) | Operational firewall infrastructure |
+| 08 | [08-rocky-linux-segment-routing-configuration.png](../evidence/08-rocky-linux-segment-routing-configuration.png) | Static application network routing |
+| 10 | [10-firewall-policy-enforcement.png](../evidence/10-firewall-policy-enforcement.png) | OPNsense firewall policy enforcement |
+| 13 | [13-opnsense-packet-filter-status.png](../evidence/13-opnsense-packet-filter-status.png) | Packet-filter status and operational statistics |
+| 14 | [14-rocky-linux-ssh-and-firewall-verification.png](../evidence/14-rocky-linux-ssh-and-firewall-verification.png) | SSH and host firewall validation |
+| 15 | [15-key-based-automation-validation.png](../evidence/15-key-based-automation-validation.png) | SSH key-based infrastructure automation |
 
 ### Engineering Outcome
 
@@ -67,12 +58,11 @@ The final architecture retained separate management, application and reserved co
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 22 | 22-automated-offline-container-image-build.png | Offline container base image construction |
-| 23 | 23-automated-application-container-build.png | Automated application image construction |
-| 24 | 24-containerized-application-runtime-validation.png | Containerized application execution |
-| 25 | 25-container-runtime-security-verification.png | Rootless container security restrictions |
-| 26 | 26-automated-container-security-validation.png | Automated runtime security verification |
-| 27 | 27-idempotent-container-deployment.png | Repeatable application deployment |
+| 22 | [22-automated-offline-container-image-build.png](../evidence/22-automated-offline-container-image-build.png) | Offline container base image construction |
+| 23 | [23-automated-application-container-build.png](../evidence/23-automated-application-container-build.png) | Automated application image construction |
+| 25 | [25-container-runtime-security-verification.png](../evidence/25-container-runtime-security-verification.png) | Rootless container security restrictions |
+| 26 | [26-automated-container-security-validation.png](../evidence/26-automated-container-security-validation.png) | Automated runtime security verification |
+| 27 | [27-idempotent-container-deployment.png](../evidence/27-idempotent-container-deployment.png) | Repeatable application deployment |
 
 ### Engineering Outcome
 
@@ -86,11 +76,9 @@ Repeated deployment confirmed that compliant application configurations could be
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 28 | 28-automated-application-recovery.png | Automated application recovery |
-| 29 | 29-graceful-shutdown-remediation.png | Application shutdown and signal handling |
-| 30 | 30-controlled-application-release-upgrade.png | Controlled application version upgrade |
-| 31 | 31-automated-rollback-trigger.png | Deliberate release validation failure |
-| 32 | 32-automated-rollback-failure-recovery.png | Automated rollback and restoration |
+| 28 | [28-automated-application-recovery.png](../evidence/28-automated-application-recovery.png) | Automated application recovery |
+| 30 | [30-controlled-application-release-upgrade.png](../evidence/30-controlled-application-release-upgrade.png) | Controlled application version upgrade |
+| 32 | [32-automated-rollback-failure-recovery.png](../evidence/32-automated-rollback-failure-recovery.png) | Automated rollback and restoration |
 
 ### Engineering Outcome
 
@@ -104,13 +92,12 @@ The tested rollback restored the original application configuration and healthy 
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 33 | 33-restricted-application-network-deployment.png | Restricted application networking |
-| 34 | 34-source-restricted-application-firewall.png | Source-specific host firewall configuration |
-| 35 | 35-opnsense-application-access-policy.png | OPNsense application access rules |
-| 36 | 36-authorized-cross-segment-application-connectivity.png | Authorized application connectivity |
-| 37 | 37-firewall-segmentation-enforcement.png | Network segmentation enforcement |
-| 38 | 38-unauthorized-source-access-denied.png | Unauthorized source connectivity testing |
-| 39 | 39-network-enabled-container-security-validation.png | Container network security validation |
+| 33 | [33-restricted-application-network-deployment.png](../evidence/33-restricted-application-network-deployment.png) | Restricted application networking |
+| 34 | [34-source-restricted-application-firewall.png](../evidence/34-source-restricted-application-firewall.png) | Source-specific host firewall configuration |
+| 35 | [35-opnsense-application-access-policy.png](../evidence/35-opnsense-application-access-policy.png) | OPNsense application access rules |
+| 36 | [36-authorized-cross-segment-application-connectivity.png](../evidence/36-authorized-cross-segment-application-connectivity.png) | Authorized application connectivity |
+| 37 | [37-firewall-segmentation-enforcement.png](../evidence/37-firewall-segmentation-enforcement.png) | Network segmentation enforcement |
+| 39 | [39-network-enabled-container-security-validation.png](../evidence/39-network-enabled-container-security-validation.png) | Container network security validation |
 
 ### Engineering Outcome
 
@@ -126,11 +113,10 @@ The validation distinguishes observed connection failures from independently con
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 40 | 40-permanent-private-application-migration.png | Permanent application network migration |
-| 41 | 41-permanent-application-deployment-idempotency.png | Idempotent private network deployment |
-| 42 | 42-application-recovery-after-infrastructure-restart.png | Application recovery after infrastructure restart |
-| 43 | 43-private-network-automated-release-rollback.png | Private network application rollback |
-| 44 | 44-private-network-rollback-independent-verification.png | Independent verification of rollback preservation |
+| 40 | [40-permanent-private-application-migration.png](../evidence/40-permanent-private-application-migration.png) | Permanent application network migration |
+| 41 | [41-permanent-application-deployment-idempotency.png](../evidence/41-permanent-application-deployment-idempotency.png) | Idempotent private network deployment |
+| 43 | [43-private-network-automated-release-rollback.png](../evidence/43-private-network-automated-release-rollback.png) | Private network application rollback |
+| 44 | [44-private-network-rollback-independent-verification.png](../evidence/44-private-network-rollback-independent-verification.png) | Independent verification of rollback preservation |
 
 ### Engineering Outcome
 
@@ -144,13 +130,11 @@ A separate rollback exercise confirmed the restoration of a protected applicatio
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 45 | 45-offline-backend-image-export.png | Offline enterprise backend image export |
-| 46 | 46-offline-docker-to-podman-image-migration.png | Docker-to-Podman application migration |
-| 48 | 48-enterprise-persistent-database-initialization.png | Persistent enterprise database initialization |
-| 49 | 49-persistent-database-integrity-and-permissions.png | SQLite integrity and filesystem permissions |
-| 50 | 50-enterprise-financial-and-project-data-ingestion.png | Fictional enterprise data ingestion |
-| 51 | 51-isolated-enterprise-api-deployment.png | Network-isolated enterprise API deployment |
-| 52 | 52-enterprise-api-health-and-network-isolation.png | Application health and network isolation |
+| 45 | [45-offline-backend-image-export.png](../evidence/45-offline-backend-image-export.png) | Offline enterprise backend image export |
+| 46 | [46-offline-docker-to-podman-image-migration.png](../evidence/46-offline-docker-to-podman-image-migration.png) | Docker-to-Podman application migration |
+| 48 | [48-enterprise-persistent-database-initialization.png](../evidence/48-enterprise-persistent-database-initialization.png) | Persistent enterprise database initialization |
+| 50 | [50-enterprise-financial-and-project-data-ingestion.png](../evidence/50-enterprise-financial-and-project-data-ingestion.png) | Fictional enterprise data ingestion |
+| 52 | [52-enterprise-api-health-and-network-isolation.png](../evidence/52-enterprise-api-health-and-network-isolation.png) | Application health and network isolation |
 
 ### Engineering Outcome
 
@@ -166,12 +150,12 @@ Database integrity, ownership, permissions and application execution were valida
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 53 | 53-enterprise-api-authentication-and-authorization-tests.png | Authentication and authorization testing |
-| 54 | 54-persistent-enterprise-security-audit-validation.png | Persistent security audit logging |
-| 55 | 55-private-enterprise-api-deployment.png | Dedicated private backend deployment |
-| 56 | 56-private-api-isolation-persistence-and-loopback-validation.png | Network isolation, persistent data and restricted port publishing |
-| 57 | 57-enterprise-api-encrypted-management-access.png | Encrypted SSH application access |
-| 58 | 58-encrypted-api-authorization-and-direct-access-restriction.png | Authorization through encrypted management access |
+| 53 | [53-enterprise-api-authentication-and-authorization-tests.png](../evidence/53-enterprise-api-authentication-and-authorization-tests.png) | Authentication and authorization testing |
+| 54 | [54-persistent-enterprise-security-audit-validation.png](../evidence/54-persistent-enterprise-security-audit-validation.png) | Persistent security audit logging |
+| 55 | [55-private-enterprise-api-deployment.png](../evidence/55-private-enterprise-api-deployment.png) | Dedicated private backend deployment |
+| 56 | [56-private-api-isolation-persistence-and-loopback-validation.png](../evidence/56-private-api-isolation-persistence-and-loopback-validation.png) | Network isolation, persistent data and restricted port publishing |
+| 57 | [57-enterprise-api-encrypted-management-access.png](../evidence/57-enterprise-api-encrypted-management-access.png) | Encrypted SSH application access |
+| 58 | [58-encrypted-api-authorization-and-direct-access-restriction.png](../evidence/58-encrypted-api-authorization-and-direct-access-restriction.png) | Authorization through encrypted management access |
 
 ### Engineering Outcome
 
@@ -189,8 +173,8 @@ The application retained persistent security audit records and was configured fo
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 59 | 59-automated-enterprise-api-deployment-validation.png | Automated enterprise backend deployment |
-| 60 | 60-enterprise-api-deployment-idempotency.png | Deployment idempotency and application preservation |
+| 59 | [59-automated-enterprise-api-deployment-validation.png](../evidence/59-automated-enterprise-api-deployment-validation.png) | Automated enterprise backend deployment |
+| 60 | [60-enterprise-api-deployment-idempotency.png](../evidence/60-enterprise-api-deployment-idempotency.png) | Deployment idempotency and application preservation |
 
 ### Engineering Outcome
 
@@ -204,10 +188,10 @@ The original container identity and startup timestamp were preserved.
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 61 | 61-enterprise-database-backup-and-service-recovery.png | Enterprise database backup and service recovery |
-| 62 | 62-enterprise-backup-integrity-and-independent-restoration.png | Backup integrity and independent restoration |
-| 63 | 63-functional-disaster-recovery-and-operational-continuity.png | Functional recovery testing |
-| 64 | 64-disaster-recovery-data-separation-and-cleanup.png | Recovery data separation and cleanup |
+| 61 | [61-enterprise-database-backup-and-service-recovery.png](../evidence/61-enterprise-database-backup-and-service-recovery.png) | Enterprise database backup and service recovery |
+| 62 | [62-enterprise-backup-integrity-and-independent-restoration.png](../evidence/62-enterprise-backup-integrity-and-independent-restoration.png) | Backup integrity and independent restoration |
+| 63 | [63-functional-disaster-recovery-and-operational-continuity.png](../evidence/63-functional-disaster-recovery-and-operational-continuity.png) | Functional recovery testing |
+| 64 | [64-disaster-recovery-data-separation-and-cleanup.png](../evidence/64-disaster-recovery-data-separation-and-cleanup.png) | Recovery data separation and cleanup |
 
 ### Engineering Outcome
 
@@ -234,8 +218,7 @@ The exercise demonstrated application-level recovery within the local laboratory
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 65 | 65-centralized-infrastructure-monitoring-healthy-state.png | Healthy infrastructure monitoring |
-| 66 | 66-infrastructure-monitoring-failure-and-recovery-validation.png | Controlled failure detection and recovery |
+| 66 | [66-infrastructure-monitoring-failure-and-recovery-validation.png](../evidence/66-infrastructure-monitoring-failure-and-recovery-validation.png) | Controlled failure detection and recovery |
 
 ### Engineering Outcome
 
@@ -249,9 +232,9 @@ Following application recovery, the monitoring utility confirmed that the infras
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 67 | 67-powershell-centralized-hyperv-infrastructure-status.png | Centralized Hyper-V administration |
-| 68 | 68-powershell-centralized-infrastructure-monitoring.png | PowerShell infrastructure monitoring |
-| 69 | 69-powershell-centralized-ansible-application-deployment.png | Centralized application deployment |
+| 67 | [67-powershell-centralized-hyperv-infrastructure-status.png](../evidence/67-powershell-centralized-hyperv-infrastructure-status.png) | Centralized Hyper-V administration |
+| 68 | [68-powershell-centralized-infrastructure-monitoring.png](../evidence/68-powershell-centralized-infrastructure-monitoring.png) | PowerShell infrastructure monitoring |
+| 69 | [69-powershell-centralized-ansible-application-deployment.png](../evidence/69-powershell-centralized-ansible-application-deployment.png) | Centralized application deployment |
 
 ### Engineering Outcome
 
@@ -272,10 +255,9 @@ The final centralized application deployment completed with 40 successful Ansibl
 
 | Reference | Evidence filename | Engineering coverage |
 |---|---|---|
-| 70 | 70-final-automated-engineering-test-suite.png | Automated Python unit test results |
-| 71 | 71-final-live-infrastructure-and-security-validation.png | Final live application and security inspection |
-| 72 | 72-final-hyper-v-private-network-segmentation.png | Final English-language Hyper-V network configuration |
-| 73 | 73-final-hyper-v-virtual-infrastructure-overview.png | Final virtual infrastructure overview |
+| 70 | [70-final-automated-engineering-test-suite.png](../evidence/70-final-automated-engineering-test-suite.png) | Automated Python unit test results |
+| 71 | [71-final-live-infrastructure-and-security-validation.png](../evidence/71-final-live-infrastructure-and-security-validation.png) | Final live application and security inspection |
+| 72 | [72-final-hyper-v-private-network-segmentation.png](../evidence/72-final-hyper-v-private-network-segmentation.png) | Final English-language Hyper-V network configuration |
 
 ### Final Verified Results
 
@@ -308,42 +290,65 @@ Gaps in the sequence reflect the original evidence collection and consolidation 
 
 ## 16. Representative Engineering Evidence
 
-The following evidence references represent the principal technical capabilities demonstrated by the completed infrastructure.
+The following selected screenshots provide a quick visual overview. The linked tables in Sections 3–14 provide direct access to all 50 published images.
 
-| Reference | Engineering capability |
-|---|---|
-| 01 | Hyper-V network isolation |
-| 22 | Offline container engineering |
-| 35 | Firewall access policy enforcement |
-| 37 | Network segmentation |
-| 39 | Container network security |
-| 44 | Automated application rollback |
-| 46 | Offline Docker-to-Podman migration |
-| 50 | Enterprise data integration |
-| 53 | Authentication and authorization testing |
-| 56 | Backend isolation and persistent storage |
-| 58 | Encrypted administrative access |
-| 60 | Idempotent deployment |
-| 62 | Backup integrity and independent restoration |
-| 64 | Recovery environment separation |
-| 66 | Infrastructure failure detection |
-| 69 | Centralized infrastructure orchestration |
-| 70 | Automated engineering tests |
-| 71 | Final operational security validation |
-| 72 | Final Hyper-V network segmentation |
-| 73 | Final virtual infrastructure overview |
+### Network policy enforcement
 
-Together, these results demonstrate the integration of infrastructure provisioning, network security, systems administration, automation, application engineering and operational reliability.
+OPNsense firewall logs illustrating permitted application traffic and blocked requests to an unauthorized port.
+
+![Network policy enforcement](../evidence/37-firewall-segmentation-enforcement.png)
+
+[Open full-size evidence](../evidence/37-firewall-segmentation-enforcement.png)
+
+### Container security validation
+
+Automated verification of 16 runtime and network-security checks.
+
+![Container security validation](../evidence/39-network-enabled-container-security-validation.png)
+
+[Open full-size evidence](../evidence/39-network-enabled-container-security-validation.png)
+
+### API authorization testing
+
+Eighteen passing authentication and authorization test cases, including expected access denials.
+
+![API authorization testing](../evidence/53-enterprise-api-authentication-and-authorization-tests.png)
+
+[Open full-size evidence](../evidence/53-enterprise-api-authentication-and-authorization-tests.png)
+
+### Independent database restoration
+
+Validated backup checksums, database integrity and restored records in a separate recovery environment.
+
+![Independent database restoration](../evidence/62-enterprise-backup-integrity-and-independent-restoration.png)
+
+[Open full-size evidence](../evidence/62-enterprise-backup-integrity-and-independent-restoration.png)
+
+### Infrastructure monitoring and orchestration
+
+PowerShell-initiated monitoring of the health service, enterprise API and host capacity.
+
+![Infrastructure monitoring and orchestration](../evidence/68-powershell-centralized-infrastructure-monitoring.png)
+
+[Open full-size evidence](../evidence/68-powershell-centralized-infrastructure-monitoring.png)
+
+### Final infrastructure validation
+
+Point-in-time security and service verification for the application host.
+
+![Final infrastructure validation](../evidence/71-final-live-infrastructure-and-security-validation.png)
+
+[Open full-size evidence](../evidence/71-final-live-infrastructure-and-security-validation.png)
 
 ## 17. Evidence Storage and Security
 
-The complete screenshot archive is stored separately from the public Git repository.
+The complete 67-screenshot working archive is retained locally. A curated subset of 50 screenshots is published in the Git repository.
 
-The repository contains the implementation source code, automation scripts, technical documentation and this evidence index.
+The repository contains the implementation source code, automation scripts, technical documentation, the 50 selected screenshots and this evidence index.
 
-The underlying screenshots include point-in-time infrastructure configuration, private laboratory addressing and operational command output.
+The published screenshots include point-in-time infrastructure configuration, private laboratory addressing and operational command output.
 
-Separating the complete evidence archive from the public repository limits unnecessary distribution of detailed operational screenshots while preserving the original technical records.
+Publishing only the curated subset limits unnecessary disclosure of implementation-stage screenshots while retaining the complete original record locally.
 
 All enterprise application data used in the laboratory is fictional.
 
@@ -367,80 +372,10 @@ The completed project is an engineering demonstrator rather than a production-ce
 - [Backup and Disaster Recovery](backup-and-recovery.md)
 - [Engineering Validation Results](validation-results.md)
 
-## 20. Standardized Evidence Archive
+## 20. Published Screenshot Inventory
 
-The finalized evidence archive contains **67 screenshots** covering infrastructure design, implementation, security testing, application deployment, disaster recovery and final validation.
+**Published:** 50 selected PNG screenshots in [`evidence/`](../evidence/), covering the project stages documented in Sections 3–14. Each entry in those tables links directly to the corresponding image in the repository.
 
-The archive includes two additional English-language Hyper-V screenshots documenting the completed network segmentation and virtual infrastructure.
+**Retained locally:** 67 original screenshots in the separate engineering evidence archive. The published filenames preserve their original numerical identifiers, so gaps in the sequence indicate intentionally unpublished or historically omitted references, not broken links.
 
-### Complete Screenshot Inventory
-
-| Evidence filename |
-|---|
-| 01-hyper-v-private-switch-configuration.png |
-| 02-opnsense-network-configuration.png |
-| 03-opnsense-routing-isolation.png |
-| 04-opnsense-operational-dashboard.png |
-| 05-ubuntu-management-server-installation.png |
-| 06-windows-to-management-server-connectivity.png |
-| 07-rocky-linux-initial-network-configuration.png |
-| 08-rocky-linux-segment-routing-configuration.png |
-| 09-rocky-linux-host-firewall-hardening.png |
-| 10-firewall-policy-enforcement.png |
-| 11-firewall-resource-optimization.png |
-| 12-opnsense-packet-filter-rules.png |
-| 13-opnsense-packet-filter-status.png |
-| 14-rocky-linux-ssh-and-firewall-verification.png |
-| 15-key-based-automation-validation.png |
-| 16-cross-segment-ssh-and-management-network-validation.png |
-| 22-automated-offline-container-image-build.png |
-| 23-automated-application-container-build.png |
-| 24-containerized-application-runtime-validation.png |
-| 25-container-runtime-security-verification.png |
-| 26-automated-container-security-validation.png |
-| 27-idempotent-container-deployment.png |
-| 28-automated-application-recovery.png |
-| 29-graceful-shutdown-remediation.png |
-| 30-controlled-application-release-upgrade.png |
-| 31-automated-rollback-trigger.png |
-| 32-automated-rollback-failure-recovery.png |
-| 33-restricted-application-network-deployment.png |
-| 34-source-restricted-application-firewall.png |
-| 35-opnsense-application-access-policy.png |
-| 36-authorized-cross-segment-application-connectivity.png |
-| 37-firewall-segmentation-enforcement.png |
-| 38-unauthorized-source-access-denied.png |
-| 39-network-enabled-container-security-validation.png |
-| 40-permanent-private-application-migration.png |
-| 41-permanent-application-deployment-idempotency.png |
-| 42-application-recovery-after-infrastructure-restart.png |
-| 43-private-network-automated-release-rollback.png |
-| 44-private-network-rollback-independent-verification.png |
-| 45-offline-backend-image-export.png |
-| 46-offline-docker-to-podman-image-migration.png |
-| 48-enterprise-persistent-database-initialization.png |
-| 49-persistent-database-integrity-and-permissions.png |
-| 50-enterprise-financial-and-project-data-ingestion.png |
-| 51-isolated-enterprise-api-deployment.png |
-| 52-enterprise-api-health-and-network-isolation.png |
-| 53-enterprise-api-authentication-and-authorization-tests.png |
-| 54-persistent-enterprise-security-audit-validation.png |
-| 55-private-enterprise-api-deployment.png |
-| 56-private-api-isolation-persistence-and-loopback-validation.png |
-| 57-enterprise-api-encrypted-management-access.png |
-| 58-encrypted-api-authorization-and-direct-access-restriction.png |
-| 59-automated-enterprise-api-deployment-validation.png |
-| 60-enterprise-api-deployment-idempotency.png |
-| 61-enterprise-database-backup-and-service-recovery.png |
-| 62-enterprise-backup-integrity-and-independent-restoration.png |
-| 63-functional-disaster-recovery-and-operational-continuity.png |
-| 64-disaster-recovery-data-separation-and-cleanup.png |
-| 65-centralized-infrastructure-monitoring-healthy-state.png |
-| 66-infrastructure-monitoring-failure-and-recovery-validation.png |
-| 67-powershell-centralized-hyperv-infrastructure-status.png |
-| 68-powershell-centralized-infrastructure-monitoring.png |
-| 69-powershell-centralized-ansible-application-deployment.png |
-| 70-final-automated-engineering-test-suite.png |
-| 71-final-live-infrastructure-and-security-validation.png |
-| 72-final-hyper-v-private-network-segmentation.png |
-| 73-final-hyper-v-virtual-infrastructure-overview.png |
+Only the curated set is represented as publicly available evidence.
